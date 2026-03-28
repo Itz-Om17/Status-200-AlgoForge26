@@ -1,9 +1,9 @@
 Flask
 flask-cors
 pandas
+numpy
 scikit-learn
 shap
 pymongo
-groq
 python-dotenv
 werkzeug
