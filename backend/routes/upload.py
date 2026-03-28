@@ -53,9 +53,9 @@ def upload_files():
     except Exception as e:
         return jsonify({"error": f"Failed to read CSV: {str(e)}"}), 400
 
-    # --- Run local sensitive-attribute detection (no LLM / no network call) ---
+    # --- Run sensitive-attribute and target detection ---
     try:
-        detection_result = detect_columns(df)
+        detection_result = detect_columns(df, data_filename)
     except Exception as e:
         return jsonify({"error": f"Sensitive feature detection failed: {str(e)}"}), 500
 
@@ -64,6 +64,7 @@ def upload_files():
         "model_file":      model_filename,
         "data_file":       data_filename,
         "columns_detected": list(df.columns),
+        "sample_data":     df.head(5).fillna("").to_dict(orient='records'),
         "rows_count":      len(df),
         # Top-level shortcuts for the frontend
         "target_column":   detection_result.get("target_column"),

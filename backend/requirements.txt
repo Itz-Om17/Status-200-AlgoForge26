@@ -7,3 +7,4 @@ shap
 pymongo
 python-dotenv
 werkzeug
+groq

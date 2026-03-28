@@ -61,12 +61,12 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
     # Sample data to maintain performance
     sample_size = min(500, len(df))
     # Try to extract the exact features the model expects. If the model is a pipeline, it will handle raw DF.
-    # Otherwise, we might need to assume the model takes all columns except the target.
-    # We will pass the whole row minus target_column since standard scikit-learn models crash if features mismatch.
-    try:
-        X = df.drop(columns=[target_column])
-    except KeyError:
-        X = df.copy()
+    # Remove ID columns and ensure target is not in features (Fix 1 & 2)
+    drop_candidates = [target_column, 'applicant_id', 'id', 'ID', 'index', 'Unnamed: 0']
+    cols_to_drop = [c for c in drop_candidates if c in df.columns]
+    X = df.drop(columns=cols_to_drop, errors='ignore')
+    
+    print("Features (Target & ID excluded):", X.columns)
 
     X_sample = X.sample(n=sample_size, random_state=42).copy()
     def safe_predict(m, df_in):
@@ -79,10 +79,11 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
                 if hasattr(m, "feature_names_in_"):
                     expected_cols = list(m.feature_names_in_)
                     df_dummies = pd.get_dummies(df_in)
-                    # Add missing columns with 0
-                    for c in expected_cols:
-                        if c not in df_dummies.columns:
-                            df_dummies[c] = 0
+                    # Add missing columns with 0 using bulk concat to avoid fragmentation
+                    missing_cols = [c for c in expected_cols if c not in df_dummies.columns]
+                    if missing_cols:
+                        pad_df = pd.DataFrame(0, index=df_dummies.index, columns=missing_cols)
+                        df_dummies = pd.concat([df_dummies, pad_df], axis=1)
                     # Reorder and slice strictly to what the model expects
                     df_aligned = df_dummies[expected_cols]
                     try:
@@ -132,12 +133,16 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
     
     flips_count = 0
     # For a simple counterfactual, we just swap the privileged and unprivileged traits
+    print(f"Unique {sensitive_column} before flip:", X_sample[sensitive_column].unique())
+    
     for idx in X_flipped.index:
         current_val = X_flipped.loc[idx, sensitive_column]
         if current_val == privileged_group:
             X_flipped.loc[idx, sensitive_column] = unprivileged_group
         else:
             X_flipped.loc[idx, sensitive_column] = privileged_group
+            
+    print(f"Unique {sensitive_column} after flip:", X_flipped[sensitive_column].unique())
 
     try:
         preds_flipped = safe_predict(model, X_flipped)
