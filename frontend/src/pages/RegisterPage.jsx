@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -78,11 +80,18 @@ export default function RegisterPage() {
           <div className="auth-input-wrapper">
             <Lock size={16} />
             <input 
-              type="password" 
+              type={showPassword ? "text" : "password"} 
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => { setForm({...form, password: e.target.value}); setError(''); }}
             />
+            <button 
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'inherit', opacity: 0.7 }}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 
@@ -91,11 +100,18 @@ export default function RegisterPage() {
           <div className="auth-input-wrapper">
             <Lock size={16} />
             <input 
-              type="password" 
+              type={showConfirmPassword ? "text" : "password"} 
               placeholder="••••••••"
               value={form.confirmPassword}
               onChange={(e) => { setForm({...form, confirmPassword: e.target.value}); setError(''); }}
             />
+            <button 
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'inherit', opacity: 0.7 }}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -44,11 +45,18 @@ export default function LoginPage() {
           <div className="auth-input-wrapper">
             <Lock size={16} />
             <input 
-              type="password" 
+              type={showPassword ? "text" : "password"} 
               placeholder="••••••••"
               value={form.password}
               onChange={(e) => { setForm({...form, password: e.target.value}); setError(''); }}
             />
+            <button 
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ background: 'none', border: 'none', padding: '0 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'inherit', opacity: 0.7 }}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
         </div>
 

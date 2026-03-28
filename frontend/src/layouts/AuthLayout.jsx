@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 export default function AuthLayout() {
@@ -30,11 +30,13 @@ export default function AuthLayout() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 5, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{ marginBottom: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: '48px', height: '48px', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 20px rgba(59,130,246,0.4)', marginBottom: '16px' }}>
-            <ShieldCheck size={24} color="#fff" />
-          </div>
-          <span style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px', color: isDarkMode ? '#fff' : '#111' }}>FairAI</span>
+        <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Full original logo from image */}
+          <img 
+            src="/logo-full.png" 
+            alt="FairAI Logo" 
+            style={{ width: '150px', height: 'auto', objectFit: 'contain' }} 
+          />
         </div>
         <div className="auth-card" style={{ backdropFilter: 'blur(24px)' }}>
           <Outlet />
