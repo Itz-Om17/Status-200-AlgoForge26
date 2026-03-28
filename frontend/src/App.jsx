@@ -7,6 +7,7 @@ import AuthLayout from './layouts/AuthLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPassword from './pages/ForgotPassword';
 import NewAnalysis from './pages/NewAnalysis';
 import AuditPanel from './pages/AuditPanel';
 import HistoryLogs from './pages/HistoryLogs';
@@ -25,6 +26,7 @@ export default function App() {
             <Route element={<AuthLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
             </Route>
 
             {/* Dashboard */}

@@ -87,6 +87,12 @@ export default function LoginPage() {
           </div>
         </div>
 
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+          <Link to="/forgot-password" style={{ fontSize: '12px', color: '#94a3b8', textDecoration: 'none' }}>
+            Forgot password?
+          </Link>
+        </div>
+
         <button disabled={loading} type="submit" className="auth-submit-btn" style={{ opacity: loading ? 0.7 : 1 }}>
           {loading ? 'Signing In...' : <>Sign In <ArrowRight size={16} /></>}
         </button>
