@@ -7,3 +7,6 @@ shap
 pymongo
 python-dotenv
 werkzeug
+pyotp
+qrcode
+pypng

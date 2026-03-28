@@ -2,12 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { signup, loginWithGoogle, updateUserProfile } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
@@ -33,25 +31,7 @@ export default function RegisterPage() {
     try {
       setError('');
       setLoading(true);
-      const userCredential = await signup(form.email, form.password);
-      await updateUserProfile({ displayName: form.name });
-
-      // Store role locally as an immediate fallback
-      localStorage.setItem('fairai-user-role', form.role || 'Analyst');
-
-      // Attempt Firestore write — wrapped separately so it never blocks auth
-      try {
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          name: form.name,
-          email: form.email,
-          role: form.role || 'Analyst',
-          createdAt: new Date().toISOString()
-        });
-      } catch (firestoreErr) {
-        // Firestore might not be enabled yet — log but don't fail registration
-        console.warn('Firestore write failed (check if Firestore is enabled in Firebase Console):', firestoreErr.message);
-      }
-
+      await signup(form.email, form.password, form.name, form.role);
       navigate('/new-analysis');
     } catch (err) {
       console.error(err);
