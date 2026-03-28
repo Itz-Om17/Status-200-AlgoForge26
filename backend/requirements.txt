@@ -4,3 +4,6 @@ pandas
 scikit-learn
 shap
 pymongo
+groq
+python-dotenv
+werkzeug

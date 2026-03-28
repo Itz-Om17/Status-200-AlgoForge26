@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   UploadCloud,
   FileText,
@@ -20,8 +21,11 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell
 export default function App() {
   const [viewState, setViewState] = useState('upload'); // 'upload', 'analyzing', 'dashboard'
   const [modalStage, setModalStage] = useState('loading'); // 'loading', 'complete'
-  const [modelFile, setModelFile] = useState(null);
-  const [datasetFile, setDatasetFile] = useState(null);
+  const [modelFile, setModelFile] = useState(null);       // actual File object
+  const [datasetFile, setDatasetFile] = useState(null);   // actual File object
+  const [detectedTarget, setDetectedTarget] = useState('');
+  const [detectedSensitive, setDetectedSensitive] = useState('');
+  const [apiError, setApiError] = useState(null);
 
   // Recharts Data mockups
   const baselineData = [
@@ -46,25 +50,39 @@ export default function App() {
   const handleDropModel = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setModelFile(e.dataTransfer.files[0].name);
+      setModelFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleDropDataset = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setDatasetFile(e.dataTransfer.files[0].name);
+      setDatasetFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleAnalyzeClick = () => {
+  const handleAnalyzeClick = async () => {
     setViewState('analyzing');
     setModalStage('loading');
-    
-    // Simulate 2-second processing
-    setTimeout(() => {
+    setApiError(null);
+
+    const formData = new FormData();
+    formData.append('model_file', modelFile);
+    formData.append('data_file', datasetFile);
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const { llm_detection } = response.data;
+      setDetectedTarget(llm_detection.target_column || 'Unknown');
+      setDetectedSensitive(llm_detection.sensitive_column || 'Unknown');
       setModalStage('complete');
-    }, 2000);
+    } catch (err) {
+      console.error('Upload/Analysis failed:', err);
+      setApiError(err.response?.data?.error || err.message || 'Something went wrong');
+      setModalStage('complete');
+    }
   };
 
   const handleConfirmAudit = () => {
@@ -76,6 +94,9 @@ export default function App() {
     setModelFile(null);
     setDatasetFile(null);
     setModalStage('loading');
+    setDetectedTarget('');
+    setDetectedSensitive('');
+    setApiError(null);
   };
 
   return (
@@ -157,7 +178,7 @@ export default function App() {
                     {modelFile ? (
                        <>
                          <CheckCircle className="w-12 h-12 text-emerald-500 mb-4" />
-                         <span className="text-lg font-medium text-emerald-400">{modelFile}</span>
+                         <span className="text-lg font-medium text-emerald-400">{modelFile.name}</span>
                          <span className="text-sm text-slate-400 mt-2">Ready for analysis</span>
                        </>
                     ) : (
@@ -165,7 +186,7 @@ export default function App() {
                          <UploadCloud className="w-12 h-12 text-slate-400 mb-4" />
                          <span className="text-lg font-medium text-white">Upload Model</span>
                          <span className="text-sm text-slate-400 mt-2">Drag & drop your .pkl file</span>
-                         <input type="file" className="hidden" id="model-upload" onChange={(e) => setModelFile(e.target.files[0]?.name)} accept=".pkl" />
+                         <input type="file" className="hidden" id="model-upload" onChange={(e) => setModelFile(e.target.files[0] || null)} accept=".pkl" />
                          <label htmlFor="model-upload" className="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white cursor-pointer transition-colors">
                            Browse Files
                          </label>
@@ -182,7 +203,7 @@ export default function App() {
                      {datasetFile ? (
                        <>
                          <CheckCircle className="w-12 h-12 text-emerald-500 mb-4" />
-                         <span className="text-lg font-medium text-emerald-400">{datasetFile}</span>
+                         <span className="text-lg font-medium text-emerald-400">{datasetFile.name}</span>
                          <span className="text-sm text-slate-400 mt-2">Data mapped successfully</span>
                        </>
                     ) : (
@@ -190,7 +211,7 @@ export default function App() {
                          <FileText className="w-12 h-12 text-slate-400 mb-4" />
                          <span className="text-lg font-medium text-white">Upload Dataset</span>
                          <span className="text-sm text-slate-400 mt-2">Drag & drop your .csv file</span>
-                         <input type="file" className="hidden" id="dataset-upload" onChange={(e) => setDatasetFile(e.target.files[0]?.name)} accept=".csv" />
+                         <input type="file" className="hidden" id="dataset-upload" onChange={(e) => setDatasetFile(e.target.files[0] || null)} accept=".csv" />
                          <label htmlFor="dataset-upload" className="mt-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white cursor-pointer transition-colors">
                            Browse Files
                          </label>
@@ -224,6 +245,20 @@ export default function App() {
                        <div className="h-2 bg-slate-700 rounded w-1/2 mx-auto animate-pulse delay-75"></div>
                      </div>
                    </div>
+                 ) : apiError ? (
+                   <div className="flex flex-col items-center w-full">
+                     <div className="bg-rose-600/20 p-4 rounded-full mb-4">
+                       <AlertTriangle className="w-10 h-10 text-rose-400" />
+                     </div>
+                     <h2 className="text-2xl font-bold text-white mb-2">Analysis Failed</h2>
+                     <p className="text-rose-400 text-center mb-8">{apiError}</p>
+                     <button 
+                       onClick={resetFlow}
+                       className="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors"
+                     >
+                       Try Again
+                     </button>
+                   </div>
                  ) : (
                    <div className="flex flex-col items-center w-full">
                      <div className="bg-indigo-600/20 p-4 rounded-full mb-4">
@@ -235,11 +270,11 @@ export default function App() {
                      <div className="bg-slate-900 rounded-xl w-full p-6 space-y-4 mb-8 border border-slate-700">
                         <div className="flex justify-between items-center border-b border-slate-800 pb-3">
                            <span className="text-slate-400">Target Variable Detected:</span>
-                           <span className="font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-md">Loan_Status</span>
+                           <span className="font-semibold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-md">{detectedTarget}</span>
                         </div>
                         <div className="flex justify-between items-center pt-1">
                            <span className="text-slate-400">Sensitive Attribute Detected:</span>
-                           <span className="font-semibold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-md">Gender</span>
+                           <span className="font-semibold text-rose-400 bg-rose-500/10 px-3 py-1 rounded-md">{detectedSensitive}</span>
                         </div>
                      </div>
 
