@@ -5,9 +5,12 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updatePassword,
+  updateProfile
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { auth, googleProvider, db } from '../firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -17,6 +20,7 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userRole, setUserRole] = useState('Analyst');
   const [loading, setLoading] = useState(true);
 
   function signup(email, password) {
@@ -39,9 +43,54 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   }
 
+  function updateUserPassword(newPassword) {
+    return updatePassword(auth.currentUser, newPassword);
+  }
+
+  function updateUserProfile(profileData) {
+    return updateProfile(auth.currentUser, profileData);
+  }
+
+  async function updateUserRole(newRole) {
+    if (!auth.currentUser) throw new Error('No authenticated user');
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    await updateDoc(userRef, { role: newRole });
+    setUserRole(newRole);
+    localStorage.setItem('fairai-user-role', newRole);
+  }
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            const role = docSnap.data().role || 'Analyst';
+            setUserRole(role);
+            localStorage.setItem('fairai-user-role', role);
+          } else {
+            // First-time Google Sign-In — create a Firestore doc
+            const defaultRole = 'Analyst';
+            await setDoc(userRef, {
+              name: user.displayName || '',
+              email: user.email || '',
+              role: defaultRole,
+              createdAt: new Date().toISOString()
+            });
+            setUserRole(defaultRole);
+            localStorage.setItem('fairai-user-role', defaultRole);
+          }
+        } catch (err) {
+          console.warn('Firestore role fetch failed:', err.message);
+          // Fall back to localStorage
+          const cached = localStorage.getItem('fairai-user-role');
+          if (cached) setUserRole(cached);
+        }
+      } else {
+        setUserRole('Analyst');
+      }
       setLoading(false);
     });
     return unsubscribe;
@@ -49,11 +98,15 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
+    userRole,
     signup,
     login,
     loginWithGoogle,
     logout,
-    resetPassword
+    resetPassword,
+    updateUserPassword,
+    updateUserProfile,
+    updateUserRole
   };
 
   return (
