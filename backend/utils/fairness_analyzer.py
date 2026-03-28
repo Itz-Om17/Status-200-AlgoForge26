@@ -3,14 +3,28 @@ import numpy as np
 import shap
 import joblib
 
+def get_fuzzy_col(df, col_name):
+    """Safely match a column ignoring case and whitespace."""
+    if col_name in df.columns: return col_name
+    col_map = {str(c).lower().strip(): c for c in df.columns}
+    return col_map.get(str(col_name).lower().strip(), None)
+
 def analyze_fairness(model_path: str, data_path: str, target_column: str, sensitive_column: str) -> dict:
     """
     Executes the 3-Tier Deep Fairness Audit on a given model and dataset.
     """
     # 1. Load Data
     df = pd.read_csv(data_path)
-    if target_column not in df.columns or sensitive_column not in df.columns:
-        raise ValueError("Target or Sensitive column not found in dataset")
+    
+    # Fuzzy match the columns to prevent case/whitespace errors from user manual input!
+    actual_target = get_fuzzy_col(df, target_column)
+    actual_sensitive = get_fuzzy_col(df, sensitive_column)
+    
+    if not actual_target or not actual_sensitive:
+        raise ValueError(f"Target or Sensitive column not found in dataset. Received target='{target_column}', sensitive='{sensitive_column}'. Available columns: {list(df.columns)}")
+        
+    target_column = actual_target
+    sensitive_column = actual_sensitive
 
     # Drop nulls in critical columns
     df = df.dropna(subset=[target_column, sensitive_column])

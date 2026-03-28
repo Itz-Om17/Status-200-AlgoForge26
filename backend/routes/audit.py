@@ -50,4 +50,6 @@ def run_audit():
             }
         }), 200
     except Exception as e:
-        return jsonify({"error": f"Audit execution failed: {str(e)}"}), 500
+        response = jsonify({"error": str(e)}) # Raw error string instead of nested
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response, 500
