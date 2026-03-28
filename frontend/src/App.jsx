@@ -26,6 +26,9 @@ export default function App() {
   const [detectedTarget, setDetectedTarget] = useState('');
   const [detectedSensitive, setDetectedSensitive] = useState('');
   const [apiError, setApiError] = useState(null);
+  const [auditParams, setAuditParams] = useState(null); // to hold model_file & data_file names
+  const [auditResults, setAuditResults] = useState(null);
+  const [isAuditing, setIsAuditing] = useState(false);
 
   // Recharts Data mockups
   const baselineData = [
@@ -74,9 +77,10 @@ export default function App() {
       const response = await axios.post('http://localhost:5000/api/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const { llm_detection } = response.data;
-      setDetectedTarget(llm_detection.target_column || 'Unknown');
-      setDetectedSensitive(llm_detection.sensitive_column || 'Unknown');
+      const { llm_detection, model_file, data_file } = response.data;
+      setDetectedTarget(llm_detection?.target_column || response.data.target_column || 'Unknown');
+      setDetectedSensitive(llm_detection?.sensitive_column || response.data.sensitive_column || 'Unknown');
+      setAuditParams({ model_file, data_file });
       setModalStage('complete');
     } catch (err) {
       console.error('Upload/Analysis failed:', err);
@@ -85,8 +89,25 @@ export default function App() {
     }
   };
 
-  const handleConfirmAudit = () => {
-    setViewState('dashboard');
+  const handleConfirmAudit = async () => {
+    setIsAuditing(true);
+    setApiError(null);
+    try {
+      const resp = await axios.post('http://localhost:5000/api/audit', {
+        model_file: auditParams.model_file,
+        data_file: auditParams.data_file,
+        target_column: detectedTarget,
+        sensitive_column: detectedSensitive
+      });
+      setAuditResults(resp.data.results);
+      setViewState('dashboard');
+    } catch (err) {
+      console.error(err);
+      setApiError(err.response?.data?.error || err.message || 'Audit failed');
+      setModalStage('complete'); // Ensure we stay in the modal to show the error
+    } finally {
+      setIsAuditing(false);
+    }
   };
 
   const resetFlow = () => {
@@ -96,6 +117,8 @@ export default function App() {
     setModalStage('loading');
     setDetectedTarget('');
     setDetectedSensitive('');
+    setAuditParams(null);
+    setAuditResults(null);
     setApiError(null);
   };
 
@@ -280,10 +303,12 @@ export default function App() {
 
                      <button 
                        onClick={handleConfirmAudit}
-                       className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20 transition-colors"
+                       disabled={isAuditing}
+                       className={`w-full py-4 rounded-xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20 transition-colors ${isAuditing ? 'bg-indigo-400/80 cursor-not-allowed text-white/80' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}
                      >
-                       <span>Confirm & Run Deep Audit</span>
-                       <Play className="w-5 h-5" fill="currentColor" />
+                       <span>{isAuditing ? 'Running Deep Audit...' : 'Confirm & Run Deep Audit'}</span>
+                       {!isAuditing && <Play className="w-5 h-5" fill="currentColor" />}
+                       {isAuditing && <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
                      </button>
                    </div>
                  )}
@@ -309,10 +334,10 @@ export default function App() {
                   <div className="relative flex items-center justify-center">
                     <svg className="w-40 h-40 transform -rotate-90">
                       <circle cx="80" cy="80" r="70" className="stroke-current text-slate-700" strokeWidth="12" fill="transparent" />
-                      <circle cx="80" cy="80" r="70" className="stroke-current text-rose-500" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset="255" strokeLinecap="round" />
+                      <circle cx="80" cy="80" r="70" className="stroke-current text-rose-500 transition-all duration-1000 ease-out" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((440 * (auditResults?.fairness_score || 0)) / 100)} strokeLinecap="round" />
                     </svg>
                     <div className="absolute flex flex-col items-center">
-                      <span className="text-4xl font-black text-white">42%</span>
+                      <span className="text-4xl font-black text-white">{auditResults?.fairness_score || 0}%</span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fairness</span>
                     </div>
                   </div>
@@ -320,21 +345,25 @@ export default function App() {
 
                 {/* Metric Cards */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className="bg-slate-900/50 p-5 rounded-xl border border-rose-500/20">
+                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.disparate_impact || 1) < 0.8 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
                     <p className="text-sm text-slate-400 mb-1">Disparate Impact</p>
                     <div className="flex items-center space-x-2">
-                       <h3 className="text-2xl font-bold text-rose-400">0.57</h3>
-                       <AlertTriangle className="w-5 h-5 text-rose-500" />
+                       <h3 className={`text-2xl font-bold ${(auditResults?.disparate_impact || 1) < 0.8 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.disparate_impact || '1.0'}</h3>
+                       {(auditResults?.disparate_impact || 1) < 0.8 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
                     </div>
-                    <p className="text-xs text-rose-400/70 mt-2">&lt; 0.8 is biased</p>
+                    <p className={`text-xs mt-2 ${(auditResults?.disparate_impact || 1) < 0.8 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
+                       {(auditResults?.disparate_impact || 1) < 0.8 ? '< 0.8 is biased' : 'Acceptable'}
+                    </p>
                   </div>
-                  <div className="bg-slate-900/50 p-5 rounded-xl border border-rose-500/20">
+                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.counterfactual_flips || 0) > 5 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
                     <p className="text-sm text-slate-400 mb-1">Counterfactual Flips</p>
                     <div className="flex items-center space-x-2">
-                       <h3 className="text-2xl font-bold text-rose-400">15%</h3>
-                       <AlertTriangle className="w-5 h-5 text-rose-500" />
+                       <h3 className={`text-2xl font-bold ${(auditResults?.counterfactual_flips || 0) > 5 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.counterfactual_flips || '0'}%</h3>
+                       {(auditResults?.counterfactual_flips || 0) > 5 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
                     </div>
-                    <p className="text-xs text-rose-400/70 mt-2">Highly unstable</p>
+                    <p className={`text-xs mt-2 ${(auditResults?.counterfactual_flips || 0) > 5 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
+                       {(auditResults?.counterfactual_flips || 0) > 5 ? 'Highly unstable' : '< 5% is robust'}
+                    </p>
                   </div>
                 </div>
 
@@ -342,14 +371,14 @@ export default function App() {
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 h-64">
                    <h3 className="text-sm font-medium text-slate-300 mb-4">SHAP Feature Importance</h3>
                    <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={baselineData} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
+                     <BarChart data={auditResults?.shap_values || []} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
                        <XAxis type="number" hide />
                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} width={100} />
                        <Tooltip cursor={{fill: '#334155'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff'}} />
                        <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                          {
-                           baselineData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={entry.name === 'Gender' ? '#ef4444' : '#6366f1'} />
+                           (auditResults?.shap_values || []).map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={entry.name === detectedSensitive ? '#ef4444' : '#6366f1'} />
                            ))
                          }
                        </Bar>

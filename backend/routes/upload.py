@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
-from utils.llm_helper import detect_columns_with_groq
+from utils.llm_helper import detect_columns
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -26,7 +26,7 @@ def upload_files():
         return jsonify({"error": "data_file (.csv) is required"}), 400
 
     model_file = request.files['model_file']
-    data_file = request.files['data_file']
+    data_file  = request.files['data_file']
 
     if model_file.filename == '' or data_file.filename == '':
         return jsonify({"error": "Both files must be selected"}), 400
@@ -39,30 +39,36 @@ def upload_files():
 
     # --- Save files ---
     model_filename = secure_filename(model_file.filename)
-    data_filename = secure_filename(data_file.filename)
+    data_filename  = secure_filename(data_file.filename)
 
     model_path = os.path.join(UPLOAD_FOLDER, model_filename)
-    data_path = os.path.join(UPLOAD_FOLDER, data_filename)
+    data_path  = os.path.join(UPLOAD_FOLDER, data_filename)
 
     model_file.save(model_path)
     data_file.save(data_path)
 
-    # --- Read CSV and run LLM detection ---
+    # --- Read CSV ---
     try:
         df = pd.read_csv(data_path)
     except Exception as e:
         return jsonify({"error": f"Failed to read CSV: {str(e)}"}), 400
 
+    # --- Run local sensitive-attribute detection (no LLM / no network call) ---
     try:
-        llm_result = detect_columns_with_groq(df)
+        detection_result = detect_columns(df)
     except Exception as e:
-        return jsonify({"error": f"LLM detection failed: {str(e)}"}), 500
+        return jsonify({"error": f"Sensitive feature detection failed: {str(e)}"}), 500
 
     return jsonify({
-        "status": "success",
-        "model_file": model_filename,
-        "data_file": data_filename,
+        "status":          "success",
+        "model_file":      model_filename,
+        "data_file":       data_filename,
         "columns_detected": list(df.columns),
-        "rows_count": len(df),
-        "llm_detection": llm_result
+        "rows_count":      len(df),
+        # Top-level shortcuts for the frontend
+        "target_column":   detection_result.get("target_column"),
+        "sensitive_column": detection_result.get("sensitive_column"),
+        "sensitive_columns": detection_result.get("sensitive_columns", []),
+        # Full structured report
+        "llm_detection":   detection_result,
     }), 200

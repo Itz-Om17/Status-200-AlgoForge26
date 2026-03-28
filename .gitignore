@@ -14,3 +14,16 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# Data and Models
+*.pkl
+*.csv
+*.h5
+*.hds5
+*.joblib
+*.npy
+*.npz
+
+# Ignore all uploads dynamically
+backend/uploads/*
+!backend/uploads/.gitkeep

@@ -1,69 +1,74 @@
-import os
-import re
-import json
-from groq import Groq
+"""
+FairAI · Column Detection Helper
+=================================
+Replaces the previous Groq/LLM-based detection with a fully local,
+heuristic approach using the SensitiveAttributeDetector.
 
-def detect_columns_with_groq(df):
+Returns the same JSON shape as before so the rest of the app is unaffected:
+    {
+        "target_column":    "loan_status",
+        "sensitive_column": "gender",          # highest-scoring sensitive col
+        "sensitive_columns": [...],            # ALL flagged sensitive cols
+        "detection_report": { ... }            # full structured report
+    }
+"""
+
+import pandas as pd
+from utils.sensitive_detector import (
+    SensitiveAttributeDetector,
+    _detect_target_column,
+)
+
+
+def detect_columns(df: pd.DataFrame, threshold: float = 20.0) -> dict:
     """
-    Uses the Groq LLM (LLaMA 3 8B) to intelligently detect
-    the target column and sensitive attribute from a DataFrame.
+    Locally detect the target column and sensitive attribute(s) from a DataFrame.
+
+    Parameters
+    ----------
+    df        : The dataset to inspect.
+    threshold : Sensitivity score threshold (0–100). Default 20.
+
+    Returns
+    -------
+    dict with keys:
+        target_column    – heuristically detected prediction target
+        sensitive_column – top-scoring sensitive attribute (or None)
+        sensitive_columns – all columns flagged as sensitive
+        detection_report  – full structured output from DetectionReport.to_dict()
     """
-    # Extract schema info: column names + up to 3 unique values per column
-    columns = list(df.columns)
-    sample_data = {}
-    for col in columns:
-        # Drop nulls, get unique values, take the first 3, convert to standard Python list
-        sample_data[col] = df[col].dropna().unique()[:3].tolist()
+    # Step 1: detect the target column (heuristic, no LLM needed)
+    target_col = _detect_target_column(df)
 
-    schema_description = (
-        f"Column names: {columns}\n"
-        f"Sample unique values per column:\n{json.dumps(sample_data, indent=2, default=str)}"
-    )
+    # Step 2: run the sensitive attribute detector on all columns
+    detector = SensitiveAttributeDetector(threshold=threshold)
+    report = detector.analyse(df)
 
-    prompt = f"""You are an expert data scientist specializing in fairness auditing of machine learning models.
+    sensitive_cols = report.sensitive_columns
 
-Given the following dataset schema, identify:
-1. The **target column** (the column the model is trying to predict, e.g., loan approval, income bracket, credit risk).
-2. The **sensitive column** (the column that represents a protected demographic attribute, e.g., gender, race, age).
+    # Step 3: pick the single "best" sensitive column
+    # Prefer columns that are not the target, ranked by score
+    best_sensitive = None
+    for r in report.sensitive_results:
+        if r.column != target_col:
+            best_sensitive = r.column
+            break
 
-Dataset Schema:
-{schema_description}
+    # If every sensitive column happens to be the target, just take the top one
+    if best_sensitive is None and sensitive_cols:
+        best_sensitive = sensitive_cols[0]
 
-You MUST respond with ONLY a valid JSON object in this exact format, with no extra text, no markdown, no explanation:
-{{"target_column": "exact_column_name", "sensitive_column": "exact_column_name"}}"""
+    return {
+        "target_column":    target_col,
+        "sensitive_column": best_sensitive,
+        "sensitive_columns": sensitive_cols,
+        "detection_report": report.to_dict(),
+    }
 
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a helpful assistant that only responds with valid JSON. No markdown, no code fences, no explanation."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        model="llama-3.3-70b-versatile",
-        temperature=0,
-        max_tokens=150,
-    )
-
-    raw_response = chat_completion.choices[0].message.content.strip()
-
-    # Parse the JSON response, handling potential quirks
-    try:
-        result = json.loads(raw_response)
-    except json.JSONDecodeError:
-        # Try to extract JSON from the response if the model wrapped it
-        json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group())
-        else:
-            result = {
-                "error": "LLM did not return valid JSON",
-                "raw_response": raw_response
-            }
-
-    return result
+# ---------------------------------------------------------------------------
+# Backward-compat shim — old import in upload.py was detect_columns_with_groq
+# ---------------------------------------------------------------------------
+def detect_columns_with_groq(df: pd.DataFrame) -> dict:
+    """Alias kept for backward compatibility — calls detect_columns() locally."""
+    return detect_columns(df)
