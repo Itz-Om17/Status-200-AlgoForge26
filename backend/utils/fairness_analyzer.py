@@ -3,6 +3,24 @@ import numpy as np
 import shap
 import joblib
 
+
+def _unwrap_model(obj):
+    """If the pkl contains a dict wrapping the model, extract the actual model."""
+    if not isinstance(obj, dict):
+        return obj
+    # Try common dict keys
+    for key in ['model', 'estimator', 'classifier', 'regressor', 'clf', 'pipeline', 'pipe']:
+        if key in obj and hasattr(obj[key], 'predict'):
+            print(f"[Unwrap] Extracted model from dict key '{key}'")
+            return obj[key]
+    # Try to find any value that has .predict()
+    for key, val in obj.items():
+        if hasattr(val, 'predict'):
+            print(f"[Unwrap] Extracted model from dict key '{key}'")
+            return val
+    # If nothing works, return the dict (will fail downstream with a clear error)
+    return obj
+
 def analyze_fairness(model_path: str, data_path: str, target_column: str, sensitive_column: str) -> dict:
     """
     Executes the 3-Tier Deep Fairness Audit on a given model and dataset.
@@ -54,7 +72,7 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
     # TIER 2: COUNTERFACTUAL CHECK (Causality)
     # ==========================================
     try:
-        model = joblib.load(model_path)
+        model = _unwrap_model(joblib.load(model_path))
     except Exception as e:
         raise ValueError(f"Failed to load model from {model_path}: {str(e)}")
 
@@ -74,7 +92,7 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
             return m.predict(df_in)
         except ValueError as ve:
             err_str = str(ve).lower()
-            if any(k in err_str for k in ["string", "object", "convert", "categorical", "mismatch", "shape", "expected"]):
+            if any(k in err_str for k in ["string", "object", "convert", "categorical", "mismatch", "shape", "expected", "feature", "match", "unseen", "missing"]):
                 # Attempt 1: One-hot encode and align columns rigorously (fixes "expected 16, got 9")
                 if hasattr(m, "feature_names_in_"):
                     expected_cols = list(m.feature_names_in_)

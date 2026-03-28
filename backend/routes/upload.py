@@ -3,6 +3,7 @@ import pandas as pd
 from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from utils.llm_helper import detect_columns
+from utils.model_type_detector import detect_model_type
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -59,17 +60,34 @@ def upload_files():
     except Exception as e:
         return jsonify({"error": f"Sensitive feature detection failed: {str(e)}"}), 500
 
+    # --- Detect Model Type (Classification vs Regression) ---
+    target_col = detection_result.get("target_column")
+    try:
+        model_type_info = detect_model_type(model_path, data_path, target_col)
+        print(f"[Upload] Model type detected: {model_type_info.get('model_type')} — {model_type_info.get('reason', '')}")
+    except Exception as e:
+        print(f"[Upload] Model type detection failed: {e}")
+        model_type_info = {
+            "model_type": "classification",
+            "reason": f"Detection failed ({str(e)}). Defaulting to classification.",
+            "confidence": 0.0,
+            "source": "error_fallback",
+        }
+
     return jsonify({
-        "status":          "success",
-        "model_file":      model_filename,
-        "data_file":       data_filename,
+        "status":           "success",
+        "model_file":       model_filename,
+        "data_file":        data_filename,
         "columns_detected": list(df.columns),
-        "sample_data":     df.head(5).fillna("").to_dict(orient='records'),
-        "rows_count":      len(df),
+        "sample_data":      df.head(5).fillna("").to_dict(orient='records'),
+        "rows_count":       len(df),
         # Top-level shortcuts for the frontend
-        "target_column":   detection_result.get("target_column"),
+        "target_column":    detection_result.get("target_column"),
         "sensitive_column": detection_result.get("sensitive_column"),
         "sensitive_columns": detection_result.get("sensitive_columns", []),
+        # Model type detection
+        "model_type":       model_type_info.get("model_type", "classification"),
+        "model_type_info":  model_type_info,
         # Full structured report
-        "llm_detection":   detection_result,
+        "llm_detection":    detection_result,
     }), 200
