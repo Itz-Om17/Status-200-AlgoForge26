@@ -31,7 +31,7 @@ export default function RegisterPage() {
     try {
       setError('');
       setLoading(true);
-      await signup(form.email, form.password);
+      await signup(form.email, form.password, form.name, form.role);
       navigate('/new-analysis');
     } catch (err) {
       console.error(err);

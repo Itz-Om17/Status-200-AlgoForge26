@@ -1,23 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, FileText, CheckCircle, AlertTriangle, Clock } from 'lucide-react';
-
-const mockHistory = [
-  { id: 1, date: '2026-03-28', model: 'loan_predictor_v3.pkl', dataset: 'adult_census.csv', fairnessScore: 92, status: 'passed', sensitive: 'Gender' },
-  { id: 2, date: '2026-03-25', model: 'hiring_model.pkl', dataset: 'hr_data.csv', fairnessScore: 67, status: 'warning', sensitive: 'Age' },
-  { id: 3, date: '2026-03-22', model: 'credit_scorer_v2.pkl', dataset: 'german_credit.csv', fairnessScore: 42, status: 'failed', sensitive: 'Gender' },
-  { id: 4, date: '2026-03-18', model: 'insurance_model.pkl', dataset: 'insurance_data.csv', fairnessScore: 88, status: 'passed', sensitive: 'Income' },
-  { id: 5, date: '2026-03-15', model: 'recidivism_v1.pkl', dataset: 'compas_data.csv', fairnessScore: 35, status: 'failed', sensitive: 'Race' },
-  { id: 6, date: '2026-03-10', model: 'loan_predictor_v2.pkl', dataset: 'lending_club.csv', fairnessScore: 78, status: 'warning', sensitive: 'Gender' },
-];
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 
 export default function HistoryLogs() {
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
 
-  const filtered = mockHistory.filter(item =>
-    item.model.toLowerCase().includes(search.toLowerCase()) ||
-    item.dataset.toLowerCase().includes(search.toLowerCase()) ||
-    item.sensitive.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    async function fetchLogs() {
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const q = query(
+          collection(db, 'audits'),
+          where('userId', '==', currentUser.uid),
+          orderBy('timestamp', 'desc')
+        );
+        const snapshot = await getDocs(q);
+        const results = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            date: data.timestamp ? data.timestamp.toDate().toISOString().split('T')[0] : 'Just now'
+          };
+        });
+        setLogs(results);
+      } catch (err) {
+        console.error("Failed to fetch history logs", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLogs();
+  }, [currentUser]);
+
+  const cycleFilter = () => {
+    const filters = ['all', 'passed', 'warning', 'failed'];
+    const idx = filters.indexOf(statusFilter);
+    setStatusFilter(filters[(idx + 1) % filters.length]);
+  };
+
+  const filtered = logs.filter(item => {
+    const matchesSearch = 
+      (item.modelName && item.modelName.toLowerCase().includes(search.toLowerCase())) ||
+      (item.datasetName && item.datasetName.toLowerCase().includes(search.toLowerCase())) ||
+      (item.sensitiveAttr && item.sensitiveAttr.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesFilter = statusFilter === 'all' || item.status === statusFilter;
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const getStatusIcon = (status) => {
     if (status === 'passed') return <CheckCircle size={14} style={{color:'#10b981'}} />;
@@ -53,15 +93,21 @@ export default function HistoryLogs() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <button className="history-filter-btn">
+        <button className="history-filter-btn" onClick={cycleFilter} style={{ textTransform: statusFilter !== 'all' ? 'capitalize' : 'none' }}>
           <Filter size={14} />
-          <span>Filter</span>
+          <span>{statusFilter === 'all' ? 'Filter' : statusFilter}</span>
         </button>
       </div>
 
       {/* Table */}
-      <div className="history-table-wrapper">
-        <table className="history-table">
+      <div className="history-table-wrapper" style={{ minHeight: '300px' }}>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#94a3b8' }}>
+            <p>Loading your audit history...</p>
+          </div>
+        ) : (
+          <>
+            <table className="history-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -84,11 +130,11 @@ export default function HistoryLogs() {
                 <td>
                   <div className="history-file">
                     <FileText size={13} />
-                    <span>{item.model}</span>
+                    <span>{item.modelName}</span>
                   </div>
                 </td>
-                <td>{item.dataset}</td>
-                <td><span className="history-attr">{item.sensitive}</span></td>
+                <td>{item.datasetName}</td>
+                <td><span className="history-attr">{item.sensitiveAttr}</span></td>
                 <td>
                   <div className="history-score">
                     <div className="history-score-bar">
@@ -109,9 +155,11 @@ export default function HistoryLogs() {
         </table>
         {filtered.length === 0 && (
           <div className="history-empty">
-            <Search size={32} style={{color:'#ccc'}} />
-            <p>No results found</p>
+            <Search size={32} style={{color:'#ccc', marginBottom: '16px'}} />
+            <p>No audits found yet!</p>
           </div>
+        )}
+          </>
         )}
       </div>
     </>

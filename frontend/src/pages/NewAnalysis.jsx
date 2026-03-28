@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 import {
   UploadCloud, FileText, CheckCircle, ChevronRight,
   Upload, Activity, Play, AlertTriangle
@@ -8,6 +11,7 @@ import {
 
 export default function NewAnalysis() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [viewState, setViewState] = useState('upload'); // 'upload', 'analyzing'
   const [modalStage, setModalStage] = useState('loading');
   
@@ -73,6 +77,25 @@ export default function NewAnalysis() {
         detectedTarget,
         detectedSensitive
       };
+
+      // Ensure history logging if currentUser exists
+      if (currentUser) {
+        try {
+          const score = resp.data.audit_results.baseline.fairness_score;
+          const status = score >= 80 ? 'passed' : score >= 60 ? 'warning' : 'failed';
+          await addDoc(collection(db, 'audits'), {
+            userId: currentUser.uid,
+            modelName: modelFile.name,
+            datasetName: datasetFile.name,
+            sensitiveAttr: detectedSensitive,
+            fairnessScore: score,
+            status: status,
+            timestamp: serverTimestamp()
+          });
+        } catch (fbErr) {
+          console.error("Failed to save audit history:", fbErr);
+        }
+      }
       
       // Cache results so they persist when user navigates away and comes back
       localStorage.setItem('current_audit', JSON.stringify(dashboardPayload));

@@ -5,9 +5,11 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updateProfile
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../firebase';
 
 const AuthContext = createContext();
 
@@ -17,10 +19,22 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  function signup(email, password) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  async function signup(email, password, name, role) {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = credential.user;
+    if (name) {
+      await updateProfile(user, { displayName: name });
+    }
+    await setDoc(doc(db, 'users', user.uid), {
+      name: name || 'User',
+      email: email,
+      role: role || 'Analyst',
+      createdAt: new Date().toISOString()
+    });
+    return credential;
   }
 
   function login(email, password) {
@@ -40,8 +54,23 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+        try {
+          const docRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data());
+          } else {
+            setUserProfile(null);
+          }
+        } catch (e) {
+          console.error("Error fetching user profile:", e);
+        }
+      } else {
+        setUserProfile(null);
+      }
       setLoading(false);
     });
     return unsubscribe;
@@ -49,6 +78,8 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
+    userProfile,
+    setUserProfile,
     signup,
     login,
     loginWithGoogle,

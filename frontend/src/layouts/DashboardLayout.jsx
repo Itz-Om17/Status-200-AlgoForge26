@@ -5,10 +5,12 @@ import {
   ShieldCheck, LogOut, User
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { currentUser, userProfile, logout } = useAuth();
 
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Audit Panel' },
@@ -17,9 +19,13 @@ export default function DashboardLayout() {
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
-  const handleSignOut = () => {
-    localStorage.removeItem('fairai-user');
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error("Failed to sign out", error);
+    }
   };
 
   return (
@@ -61,8 +67,19 @@ export default function DashboardLayout() {
             <button onClick={handleSignOut} className="icon-btn" title="Sign Out">
               <LogOut size={15} />
             </button>
-            <div className="user-avatar">
-              <User size={14} />
+            <div 
+              className="user-avatar" 
+              onClick={() => navigate('/settings')}
+              style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              title="Go to Settings"
+            >
+              {currentUser?.photoURL ? (
+                <img src={currentUser.photoURL} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
+                  {userProfile?.name?.charAt(0)?.toUpperCase() || currentUser?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+                </span>
+              )}
             </div>
           </div>
         </div>
