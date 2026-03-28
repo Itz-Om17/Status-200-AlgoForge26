@@ -66,16 +66,19 @@ export default function NewAnalysis() {
         target_column: detectedTarget,
         sensitive_column: detectedSensitive
       });
+      const dashboardPayload = { 
+        auditResults: resp.data.audit_results, 
+        modelFileName: modelFile.name, 
+        datasetFileName: datasetFile.name,
+        detectedTarget,
+        detectedSensitive
+      };
+      
+      // Cache results so they persist when user navigates away and comes back
+      localStorage.setItem('current_audit', JSON.stringify(dashboardPayload));
+
       // Pass the fully computed results natively to the Dashboard routing structure
-      navigate('/dashboard', { 
-        state: { 
-          auditResults: resp.data.audit_results, 
-          modelFileName: modelFile.name, 
-          datasetFileName: datasetFile.name,
-          detectedTarget,
-          detectedSensitive
-        } 
-      });
+      navigate('/dashboard', { state: dashboardPayload });
     } catch (err) {
       console.error(err);
       setApiError(err.response?.data?.error || err.message || 'Audit failed');
@@ -94,6 +97,7 @@ export default function NewAnalysis() {
     setDetectedSensitive('');
     setAuditParams(null);
     setApiError(null);
+    localStorage.removeItem('current_audit');
   };
 
   return (

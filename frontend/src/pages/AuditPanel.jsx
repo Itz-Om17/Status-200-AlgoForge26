@@ -1,17 +1,30 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, DownloadCloud } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function AuditPanel() {
-  const { state } = useLocation();
+  const { state: navigationState } = useLocation();
   const navigate = useNavigate();
 
-  const auditResults = state?.auditResults;
-  const modelFileName = state?.modelFileName;
-  const datasetFileName = state?.datasetFileName;
-  const detectedTarget = state?.detectedTarget;
-  const detectedSensitive = state?.detectedSensitive;
+  const [localData, setLocalData] = useState(() => {
+    // 1. Prioritize new data passed explicitly via React Router navigation
+    if (navigationState?.auditResults) return navigationState;
+    // 2. Fallback to localStorage rehydration for page refreshes / tab switches
+    try {
+      const cached = localStorage.getItem('current_audit');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {
+      console.error('Failed to parse cached audit', e);
+    }
+    return null;
+  });
+
+  const auditResults = localData?.auditResults;
+  const modelFileName = localData?.modelFileName;
+  const datasetFileName = localData?.datasetFileName;
+  const detectedTarget = localData?.detectedTarget;
+  const detectedSensitive = localData?.detectedSensitive;
 
   // Toast State
   const [toastMessage, setToastMessage] = useState(null);
