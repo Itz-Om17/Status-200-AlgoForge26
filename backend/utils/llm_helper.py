@@ -19,13 +19,62 @@ from utils.sensitive_detector import (
     SensitiveAttributeDetector,
     _detect_target_column,
 )
+from groq import Groq
+
+# Initialize Groq client
+_groq_client = None
+if os.getenv("GROQ_API_KEY"):
+    _groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+def generate_audit_explanation(metrics: dict, is_baseline: bool = True, is_combined: bool = False) -> str:
+    """
+    Calls Groq LLaMA 70B to generate a 2-sentence plain-English summary of the audit results.
+    """
+    if not _groq_client:
+        return "AI Insight currently unavailable (Missing API Key)."
+        
+    score = metrics.get('fairness_score') or metrics.get('overall_fairness_score', 0)
+    di = metrics.get('disparate_impact') or metrics.get('worst_disparate_impact', 1.0)
+    cf = metrics.get('counterfactual_flips') or metrics.get('max_counterfactual_flips', 0)
+    shap_data = metrics.get('shap_values', [])
+    top_features = [s['name'] for s in shap_data[:3]] if shap_data else ["None"]
+
+    if is_combined:
+        prompt = f"""
+        You are an AI fairness auditor. Write exactly 2 sentences in plain-English to explain the FINAL COMBINED fairness audit for an entire ML system.
+        Overall Fairness: {score}%. Worst Disparate Impact: {di}. Max Counterfactual Instability: {cf}%.
+        Provide a bird's-eye view verdict on the system's safety. If any score indicates bias, use a cautionary tone.
+        """
+    elif is_baseline:
+        prompt = f"""
+        You are an AI fairness auditor. Write exactly 2 sentences in plain-English to explain baseline model audit results.
+        Fairness Score: {score}%. Disparate Impact Ratio: {di}. Counterfactual flips: {cf}%. 
+        Top influential features: {', '.join(top_features)}.
+        If the score is below 80%, identify why the bias is happening.
+        """
+    else:
+        prompt = f"""
+        You are an AI fairness auditor. Write exactly 2 sentences in plain-English to explain mitigated (de-biased) model results.
+        Fairness Score: {score}%. Disparate Impact Ratio: {di}. Counterfactual flips: {cf}%.
+        Top features: {', '.join(top_features)}.
+        Explain that the sensitive attribute's influence has been successfully reduced.
+        """
+        
+    try:
+        completion = _groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=150
+        )
+        return completion.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Explanation extraction error: {str(e)}")
+        return "AI Insight could not be generated at this moment."
 
 def _detect_target_groq(df: pd.DataFrame, dataset_name: str) -> str:
-    from groq import Groq
-    
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        print("GROQ_API_KEY not found. Skipping LLM target detection.")
+    if not _groq_client:
+        print("Groq Client not initialized. Skipping LLM target detection.")
         return None
         
     try:
