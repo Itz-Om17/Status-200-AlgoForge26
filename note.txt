@@ -1,0 +1,25 @@
+in the mitigation logic for creating the bias mitigated/unbiased csv we run the mitigation_engine.py, it appends a new column at the end of csv which contains the fixed/fair predictions 
+and for unbiased pkl file we dont retrain the model/pkl file again on this new unbiased csv because it will consume alot of time for us but for production level it would take hours!, we want something lightning fast and for that we just zip original model with python mitigation script, which will fix the users model/pkl file.
+Basically, deploying/plugging our lightweight filter on top of your existing model
+
+
+
+
+
+If you see a highly qualified woman was rejected by 1%, you manually flip her result to "Approved" to balance the overall fairness. aka ROC (Reject Option Based Classification) logic
+
+# ==========================================
+# Example Usage Instructions for the Client:
+# ==========================================
+# 
+# from fairness_guardrail import FairAIWrapper
+#
+# # 1. Initialize the wrapper with your existing model
+# fair_model = FairAIWrapper('xgb_model_GCD.pkl')
+#
+# # 2. Run your data through the predict_fair function instead of standard predict
+# safe_predictions = fair_model.predict_fair(
+#     X=my_dataframe, 
+#     sensitive_col='Gender', 
+#     unprivileged_value='Female'
+# )

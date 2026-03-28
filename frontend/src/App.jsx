@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import {
   UploadCloud,
@@ -144,9 +144,50 @@ export default function App() {
     setApiError(null);
   };
 
+  const [toastMessage, setToastMessage] = useState(null);
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleSecureDownload = async (url, filename, startMsg, endMsg) => {
+    try {
+      showToast(startMsg);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+      
+      showToast(endMsg);
+    } catch (err) {
+      console.error(err);
+      showToast("Download Failed - See Console");
+    }
+  };
+
   return (
     <div className="flex h-screen bg-slate-900 text-slate-200 font-sans overflow-hidden">
       
+      {/* Toast Notification Layer */}
+      {toastMessage && (
+        <div className="fixed top-8 right-8 bg-slate-800 border-l-4 border-emerald-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[9999] animate-in slide-in-from-top-4 flex items-center space-x-3">
+            <CheckCircle className="w-5 h-5 text-emerald-400" />
+            <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between">
         <div>
@@ -263,6 +304,7 @@ export default function App() {
                        </>
                     )}
                   </div>
+
                </div>
 
                <button 
@@ -442,10 +484,10 @@ export default function App() {
                   <div className="relative flex items-center justify-center">
                     <svg className="w-40 h-40 transform -rotate-90">
                       <circle cx="80" cy="80" r="70" className="stroke-current text-slate-700" strokeWidth="12" fill="transparent" />
-                      <circle cx="80" cy="80" r="70" className="stroke-current text-emerald-500" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset="35" strokeLinecap="round" />
+                      <circle cx="80" cy="80" r="70" className="stroke-current text-emerald-500 transition-all duration-1000 ease-out" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((440 * (auditResults?.mitigated?.fairness_score || 0)) / 100)} strokeLinecap="round" />
                     </svg>
                     <div className="absolute flex flex-col items-center">
-                      <span className="text-4xl font-black text-white">92%</span>
+                      <span className="text-4xl font-black text-white">{auditResults?.mitigated?.fairness_score || 0}%</span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fairness</span>
                     </div>
                   </div>
@@ -459,7 +501,7 @@ export default function App() {
                       <InfoTooltip title="Disparate Impact" description="Compares how often the AI approves people from different groups. Example: If the AI approves 80% of Men but only 40% of Women, the score is 0.5 (Bias Detected!). A fair AI scores close to 1.0." />
                     </p>
                     <div className="flex items-center space-x-2">
-                       <h3 className="text-2xl font-bold text-emerald-400">0.95</h3>
+                       <h3 className="text-2xl font-bold text-emerald-400">{auditResults?.mitigated?.disparate_impact || '0'}</h3>
                        <CheckCircle className="w-5 h-5 text-emerald-500" />
                     </div>
                     <p className="text-xs text-emerald-400/70 mt-2">Optimal range</p>
@@ -470,7 +512,7 @@ export default function App() {
                       <InfoTooltip title="Counterfactual Flips" description='The "What-If" test. We take a profile, secretly flip ONLY their sensitive trait (like changing Gender from Male to Female), and ask the AI again. If the AI changes its final decision, it proves the AI is actively biased!' />
                     </p>
                     <div className="flex items-center space-x-2">
-                       <h3 className="text-2xl font-bold text-emerald-400">1%</h3>
+                       <h3 className="text-2xl font-bold text-emerald-400">{auditResults?.mitigated?.counterfactual_flips || '0'}%</h3>
                        <CheckCircle className="w-5 h-5 text-emerald-500" />
                     </div>
                     <p className="text-xs text-emerald-400/70 mt-2">Robust decisions</p>
@@ -492,21 +534,47 @@ export default function App() {
                      <InfoTooltip title="SHAP Feature Importance" description="X-Ray vision! This chart shows exactly which columns the AI secretly cares about the most when making decisions. If 'Gender' or 'Race' is a massive bar at the top, the AI is severely biased." />
                    </h3>
                    <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={mitigatedData} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
+                     <BarChart data={auditResults?.mitigated?.shap_values || []} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
                        <XAxis type="number" hide />
                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} width={100} />
                        <Tooltip cursor={{fill: '#334155'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff'}} />
                        <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                          {
-                           mitigatedData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={entry.name === 'Gender' ? '#10b981' : '#6366f1'} />
+                           (auditResults?.mitigated?.shap_values || []).map((entry, index) => (
+                             <Cell key={`cell-${index}`} fill={entry.name === detectedSensitive ? '#10b981' : '#6366f1'} />
                            ))
                          }
                        </Bar>
                      </BarChart>
                    </ResponsiveContainer>
-                </div>
-              </div>
+                 </div>
+                 {auditResults?.mitigated && (
+                   <div className="flex flex-col sm:flex-row gap-4 mt-6 print:hidden">
+                     <button 
+                       onClick={() => handleSecureDownload(
+                         `http://localhost:5000/api/download/data?data_file=${datasetFile?.name}&target_column=${detectedTarget}`,
+                         `Mitigated_${datasetFile?.name}`,
+                         "Exporting Mitigated Dataset...",
+                         "Dataset Downloaded Successfully!"
+                       )}
+                       className="flex-1 py-3 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 border border-emerald-500/50 rounded-xl text-sm font-bold transition-all focus:outline-none flex items-center justify-center gap-2 shadow-lg"
+                     >
+                       Export Fair Dataset (.csv)
+                     </button>
+                     <button 
+                       onClick={() => handleSecureDownload(
+                         `http://localhost:5000/api/download/wrapper?model_file=${modelFile?.name}`,
+                         "FairAI_Enterprise_Wrapper.zip",
+                         "Packaging Enterprise Wrapper...",
+                         "Wrapper Downloaded Successfully!"
+                       )}
+                       className="flex-1 py-3 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/50 rounded-xl text-sm font-bold transition-all focus:outline-none flex items-center justify-center gap-2 shadow-lg"
+                     >
+                       Deploy Model Wrapper (.zip)
+                     </button>
+                    </div>
+                  )}
+               </div>
 
             </div>
           )}

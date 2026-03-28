@@ -30,12 +30,9 @@ def run_audit():
         # Run the deep fairness audit based on 3-Tier logic
         results = analyze_fairness(model_path, data_path, target_column, sensitive_column)
         
-        # --- Generate Mock Mitigated Results (since it's static for now) ---
-        import copy
-        mitigated = copy.deepcopy(results)
-        mitigated['fairness_score'] = 92
-        mitigated['disparate_impact'] = 0.95
-        mitigated['counterfactual_flips'] = 1.0
+        # --- Apply ROC Fairness Mitigation ---
+        from utils.mitigation_engine import apply_roc_mitigation
+        mitigated = apply_roc_mitigation(results, sensitive_column)
         
         # --- Generate Groq AI Explanations ---
         from utils.llm_helper import generate_audit_explanation
