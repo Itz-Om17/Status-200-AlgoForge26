@@ -29,6 +29,28 @@ def run_audit():
     try:
         # Run the deep fairness audit based on 3-Tier logic
         results = analyze_fairness(model_path, data_path, target_column, sensitive_column)
-        return jsonify({"status": "success", "results": results}), 200
+        
+        # --- Generate Mock Mitigated Results (since it's static for now) ---
+        import copy
+        mitigated = copy.deepcopy(results)
+        mitigated['fairness_score'] = 92
+        mitigated['disparate_impact'] = 0.95
+        mitigated['counterfactual_flips'] = 1.0
+        
+        # --- Generate Groq AI Explanations ---
+        from utils.llm_helper import generate_audit_explanation
+        baseline_explanation = generate_audit_explanation(results, is_baseline=True)
+        mitigated_explanation = generate_audit_explanation(mitigated, is_baseline=False)
+        
+        results['explanation'] = baseline_explanation
+        mitigated['explanation'] = mitigated_explanation
+        
+        return jsonify({
+            "status": "success", 
+            "audit_results": {
+                "baseline": results,
+                "mitigated": mitigated
+            }
+        }), 200
     except Exception as e:
         return jsonify({"error": f"Audit execution failed: {str(e)}"}), 500

@@ -121,7 +121,7 @@ export default function App() {
         target_column: detectedTarget,
         sensitive_column: detectedSensitive
       });
-      setAuditResults(resp.data.results);
+      setAuditResults(resp.data.audit_results);
       setViewState('dashboard');
     } catch (err) {
       console.error(err);
@@ -357,10 +357,10 @@ export default function App() {
                   <div className="relative flex items-center justify-center">
                     <svg className="w-40 h-40 transform -rotate-90">
                       <circle cx="80" cy="80" r="70" className="stroke-current text-slate-700" strokeWidth="12" fill="transparent" />
-                      <circle cx="80" cy="80" r="70" className="stroke-current text-rose-500 transition-all duration-1000 ease-out" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((440 * (auditResults?.fairness_score || 0)) / 100)} strokeLinecap="round" />
+                      <circle cx="80" cy="80" r="70" className="stroke-current text-rose-500 transition-all duration-1000 ease-out" strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((440 * (auditResults?.baseline?.fairness_score || 0)) / 100)} strokeLinecap="round" />
                     </svg>
                     <div className="absolute flex flex-col items-center">
-                      <span className="text-4xl font-black text-white">{auditResults?.fairness_score || 0}%</span>
+                      <span className="text-4xl font-black text-white">{auditResults?.baseline?.fairness_score || 0}%</span>
                       <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Fairness</span>
                     </div>
                   </div>
@@ -368,33 +368,41 @@ export default function App() {
 
                 {/* Metric Cards */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.disparate_impact || 1) < 0.8 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
+                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.baseline?.disparate_impact || 1) < 0.8 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
                     <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
                       Disparate Impact
                       <InfoTooltip title="Disparate Impact" description="Compares how often the AI approves people from different groups. Example: If the AI approves 80% of Men but only 40% of Women, the score is 0.5 (Bias Detected!). A fair AI scores close to 1.0." />
                     </p>
                     <div className="flex items-center space-x-2">
-                       <h3 className={`text-2xl font-bold ${(auditResults?.disparate_impact || 1) < 0.8 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.disparate_impact || '1.0'}</h3>
-                       {(auditResults?.disparate_impact || 1) < 0.8 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                       <h3 className={`text-2xl font-bold ${(auditResults?.baseline?.disparate_impact || 1) < 0.8 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.baseline?.disparate_impact || '1.0'}</h3>
+                       {(auditResults?.baseline?.disparate_impact || 1) < 0.8 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
                     </div>
-                    <p className={`text-xs mt-2 ${(auditResults?.disparate_impact || 1) < 0.8 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
-                       {(auditResults?.disparate_impact || 1) < 0.8 ? '< 0.8 is biased' : 'Acceptable'}
+                    <p className={`text-xs mt-2 ${(auditResults?.baseline?.disparate_impact || 1) < 0.8 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
+                       {(auditResults?.baseline?.disparate_impact || 1) < 0.8 ? '< 0.8 is biased' : 'Acceptable'}
                     </p>
                   </div>
-                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.counterfactual_flips || 0) > 5 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
+                  <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.baseline?.counterfactual_flips || 0) > 5 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
                     <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
                       Counterfactual Flips
                       <InfoTooltip title="Counterfactual Flips" description='The "What-If" test. We take a profile, secretly flip ONLY their sensitive trait (like changing Gender from Male to Female), and ask the AI again. If the AI changes its final decision, it proves the AI is actively biased!' />
                     </p>
                     <div className="flex items-center space-x-2">
-                       <h3 className={`text-2xl font-bold ${(auditResults?.counterfactual_flips || 0) > 5 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.counterfactual_flips || '0'}%</h3>
-                       {(auditResults?.counterfactual_flips || 0) > 5 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                       <h3 className={`text-2xl font-bold ${(auditResults?.baseline?.counterfactual_flips || 0) > 5 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.baseline?.counterfactual_flips || '0'}%</h3>
+                       {(auditResults?.baseline?.counterfactual_flips || 0) > 5 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
                     </div>
-                    <p className={`text-xs mt-2 ${(auditResults?.counterfactual_flips || 0) > 5 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
-                       {(auditResults?.counterfactual_flips || 0) > 5 ? 'Highly unstable' : '< 5% is robust'}
+                    <p className={`text-xs mt-2 ${(auditResults?.baseline?.counterfactual_flips || 0) > 5 ? 'text-rose-400/70' : 'text-emerald-400/70'}`}>
+                       {(auditResults?.baseline?.counterfactual_flips || 0) > 5 ? 'Highly unstable' : '< 5% is robust'}
                     </p>
                   </div>
                 </div>
+
+                {/* AI Insight Box */}
+                {auditResults?.baseline?.explanation && (
+                  <div className="bg-slate-800/80 border border-slate-600 rounded-xl p-4 mb-6 flex items-start space-x-3">
+                    <Info className="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-slate-300 leading-relaxed font-medium">{auditResults.baseline.explanation}</p>
+                  </div>
+                )}
 
                 {/* Explainability Chart */}
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 h-64">
@@ -403,13 +411,13 @@ export default function App() {
                      <InfoTooltip title="SHAP Feature Importance" description="X-Ray vision! This chart shows exactly which columns the AI secretly cares about the most when making decisions. If 'Gender' or 'Race' is a massive bar at the top, the AI is severely biased." />
                    </h3>
                    <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={auditResults?.shap_values || []} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
+                     <BarChart data={auditResults?.baseline?.shap_values || []} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
                        <XAxis type="number" hide />
                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} width={100} />
                        <Tooltip cursor={{fill: '#334155'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '8px', color: '#fff'}} />
                        <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                          {
-                           (auditResults?.shap_values || []).map((entry, index) => (
+                           (auditResults?.baseline?.shap_values || []).map((entry, index) => (
                              <Cell key={`cell-${index}`} fill={entry.name === detectedSensitive ? '#ef4444' : '#6366f1'} />
                            ))
                          }
@@ -468,6 +476,14 @@ export default function App() {
                     <p className="text-xs text-emerald-400/70 mt-2">Robust decisions</p>
                   </div>
                 </div>
+
+                {/* AI Insight Box */}
+                {auditResults?.mitigated?.explanation && (
+                  <div className="bg-slate-800/80 border border-emerald-500/30 rounded-xl p-4 mb-6 flex items-start space-x-3">
+                    <Info className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-slate-300 leading-relaxed font-medium">{auditResults.mitigated.explanation}</p>
+                  </div>
+                )}
 
                 {/* Explainability Chart */}
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 h-64">
