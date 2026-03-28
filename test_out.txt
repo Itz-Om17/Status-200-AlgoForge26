@@ -1,0 +1,68 @@
+﻿
+============================================================
+STEP 1: Creating test regression dataset
+============================================================
+[OK] Created dataset with 400 rows: ['experience', 'skills_score', 'gender', 'region', 'education_years', 'salary']
+   Mean salary: Male=68516, Female=62695
+   Mean salary: Urban=66783, Rural=64469
+
+============================================================
+STEP 2: Training LinearRegression model
+============================================================
+[OK] Model R2 on training data: 0.9511
+   Coefficients: {'experience': 1962.84, 'skills_score': 1510.14, 'gender': 8448.91, 'region': 2989.14, 'education_years': 453.87}
+[OK] Model saved to uploads\test_regression_model.pkl
+
+============================================================
+STEP 3: Testing Model Type Detection
+============================================================
+[ModelTypeDetector] Only 8 training samples ΓÇö need 20+ for local prediction.
+GROQ_API_KEY not set. Skipping LLM detection.
+[ModelTypeDetector] ΓÜá∩╕Å Heuristic fallback: regression ΓÇö Model inherits from sklearn RegressorMixin.
+[ModelTypeDetector] Logged training sample: regression (heuristic) ΓÇö LinearRegression
+[OK] Detected model type: regression
+   Reason: Model inherits from sklearn RegressorMixin.
+   Confidence: 0.95
+   Source: heuristic
+[PASS] Model correctly identified as regression
+
+============================================================
+STEP 4: Testing Regression Fairness Analyzer (gender)
+============================================================
+[RegressionAnalyzer] Features (Target & ID excluded): ['experience', 'skills_score', 'gender', 'region', 'education_years']
+[RegressionAnalyzer] Sensitive column: gender, groups: ['Male' 'Female']
+[RegressionAnalyzer] Group mean predictions: {'Female': 62694.69948186528, 'Male': 68515.99033816425}
+[RegressionAnalyzer] MPG: 5821.2909, Normalized: 0.9150
+[RegressionAnalyzer] Privileged group 'Male' mean: 68515.99
+[RegressionAnalyzer] Unprivileged group 'Female' mean: 62694.70
+[RegressionAnalyzer] CF avg absolute diff: 8448.9108
+[RegressionAnalyzer] CF avg % change: 13.39%
+[RegressionAnalyzer] Group MSEs: {'Female': 8568494.1395, 'Male': 8359340.5693}
+[RegressionAnalyzer] Error ratio (min/max): 0.9756
+[RegressionAnalyzer] Final Score: 61% (MPG=91.5, CF_pen=30.0, SHAP_pen=0.0)
+[OK] Fairness Score: 61%
+   Mean Prediction Gap: 5821.29
+   MPG Normalized: 0.915
+   Group Means: {'Female': 62694.7, 'Male': 68515.99}
+   Privileged: Male, Unprivileged: Female
+   Counterfactual Avg Diff: 8448.91
+   Counterfactual % Change: 13.4%
+   Error Ratio: 0.976
+   Is Biased: True
+   SHAP Top Features: ['experience', 'skills_score', 'education_years']
+   MPG normalized value = 0.915 (bias detected if < 0.8)
+[PASS] Bias correctly detected!
+
+============================================================
+STEP 5: Verifying classification detection still works
+============================================================
+[ModelTypeDetector] Only 9 training samples ΓÇö need 20+ for local prediction.
+GROQ_API_KEY not set. Skipping LLM detection.
+[ModelTypeDetector] ΓÜá∩╕Å Heuristic fallback: classification ΓÇö Model inherits from sklearn ClassifierMixin.
+[ModelTypeDetector] Logged training sample: classification (heuristic) ΓÇö LogisticRegression
+[OK] Classification model detected as: classification
+   Reason: Model inherits from sklearn ClassifierMixin.
+
+============================================================
+ALL TESTS COMPLETED SUCCESSFULLY!
+============================================================
