@@ -14,8 +14,30 @@ import {
   Activity,
   LogOut,
   RefreshCcw,
-  Upload
+  Upload,
+  Info
 } from 'lucide-react';
+
+const InfoTooltip = ({ title, description, position = "top" }) => (
+  <div className="relative flex items-center group/tooltip ml-2">
+    <Info className="w-5 h-5 text-slate-400 hover:text-indigo-400 cursor-help transition-colors z-10" />
+    <div className={`absolute ${position === 'top' ? 'bottom-full mb-3' : 'top-full mt-3'} left-1/2 -translate-x-1/2 w-[320px] p-5 bg-slate-800 text-sm text-slate-300 rounded-2xl border border-slate-600 shadow-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-[100] pointer-events-none`}>
+      <p className="font-bold text-white mb-2 text-base leading-tight">{title}</p>
+      <p className="leading-relaxed opacity-90">{description}</p>
+      {position === 'top' ? (
+        <>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-[8px] border-t-slate-600 border-x-transparent border-b-transparent"></div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[2px] border-[7px] border-t-slate-800 border-x-transparent border-b-transparent"></div>
+        </>
+      ) : (
+        <>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px border-[8px] border-b-slate-600 border-x-transparent border-t-transparent"></div>
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-[2px] border-[7px] border-b-slate-800 border-x-transparent border-t-transparent"></div>
+        </>
+      )}
+    </div>
+  </div>
+);
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 export default function App() {
@@ -321,12 +343,13 @@ export default function App() {
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
               
               {/* ------------ BASELINE MODEL ------------ */}
-              <div className="bg-slate-800/50 backdrop-blur rounded-3xl p-8 border border-slate-700 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 to-rose-600"></div>
+              <div className="bg-slate-800/50 backdrop-blur rounded-3xl p-8 border border-slate-700 relative">
+                <div className="absolute top-0 left-0 w-full h-1 rounded-t-3xl bg-gradient-to-r from-rose-500 to-rose-600"></div>
                 
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center relative z-50">
                   <span className="text-rose-400 mr-3">●</span> 
                   Baseline Model
+                  <InfoTooltip position="bottom" title="Baseline Model" description="The original AI model exactly as you uploaded it. This shows how your AI behaves in the real world before we apply any fairness fixes." />
                 </h2>
                 
                 {/* Fairness Score Circle */}
@@ -346,7 +369,10 @@ export default function App() {
                 {/* Metric Cards */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.disparate_impact || 1) < 0.8 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
-                    <p className="text-sm text-slate-400 mb-1">Disparate Impact</p>
+                    <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
+                      Disparate Impact
+                      <InfoTooltip title="Disparate Impact" description="Compares how often the AI approves people from different groups. Example: If the AI approves 80% of Men but only 40% of Women, the score is 0.5 (Bias Detected!). A fair AI scores close to 1.0." />
+                    </p>
                     <div className="flex items-center space-x-2">
                        <h3 className={`text-2xl font-bold ${(auditResults?.disparate_impact || 1) < 0.8 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.disparate_impact || '1.0'}</h3>
                        {(auditResults?.disparate_impact || 1) < 0.8 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
@@ -356,7 +382,10 @@ export default function App() {
                     </p>
                   </div>
                   <div className={`bg-slate-900/50 p-5 rounded-xl border ${(auditResults?.counterfactual_flips || 0) > 5 ? 'border-rose-500/20' : 'border-emerald-500/20'}`}>
-                    <p className="text-sm text-slate-400 mb-1">Counterfactual Flips</p>
+                    <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
+                      Counterfactual Flips
+                      <InfoTooltip title="Counterfactual Flips" description='The "What-If" test. We take a profile, secretly flip ONLY their sensitive trait (like changing Gender from Male to Female), and ask the AI again. If the AI changes its final decision, it proves the AI is actively biased!' />
+                    </p>
                     <div className="flex items-center space-x-2">
                        <h3 className={`text-2xl font-bold ${(auditResults?.counterfactual_flips || 0) > 5 ? 'text-rose-400' : 'text-emerald-400'}`}>{auditResults?.counterfactual_flips || '0'}%</h3>
                        {(auditResults?.counterfactual_flips || 0) > 5 ? <AlertTriangle className="w-5 h-5 text-rose-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
@@ -369,7 +398,10 @@ export default function App() {
 
                 {/* Explainability Chart */}
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 h-64">
-                   <h3 className="text-sm font-medium text-slate-300 mb-4">SHAP Feature Importance</h3>
+                   <h3 className="text-sm font-medium text-slate-300 mb-4 flex items-center relative z-40">
+                     SHAP Feature Importance
+                     <InfoTooltip title="SHAP Feature Importance" description="X-Ray vision! This chart shows exactly which columns the AI secretly cares about the most when making decisions. If 'Gender' or 'Race' is a massive bar at the top, the AI is severely biased." />
+                   </h3>
                    <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={auditResults?.shap_values || []} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
                        <XAxis type="number" hide />
@@ -388,12 +420,13 @@ export default function App() {
               </div>
 
               {/* ------------ MITIGATED MODEL ------------ */}
-              <div className="bg-slate-800/50 backdrop-blur rounded-3xl p-8 border border-slate-700 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-emerald-500"></div>
+              <div className="bg-slate-800/50 backdrop-blur rounded-3xl p-8 border border-slate-700 relative">
+                <div className="absolute top-0 left-0 w-full h-1 rounded-t-3xl bg-gradient-to-r from-emerald-400 to-emerald-500"></div>
                 
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                <h2 className="text-2xl font-bold text-white mb-6 flex items-center relative z-50">
                   <span className="text-emerald-400 mr-3">●</span> 
                   Mitigated Model
+                  <InfoTooltip position="bottom" title="Mitigated Model" description='The "fixed" version of your AI. We applied smart mathematical rules to aggressively reduce bias against marginalized groups while trying to keep the AI as accurate as possible.' />
                 </h2>
                 
                 {/* Fairness Score Circle */}
@@ -413,7 +446,10 @@ export default function App() {
                 {/* Metric Cards */}
                 <div className="grid grid-cols-2 gap-4 mb-8">
                   <div className="bg-slate-900/50 p-5 rounded-xl border border-emerald-500/20">
-                    <p className="text-sm text-slate-400 mb-1">Disparate Impact</p>
+                    <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
+                      Disparate Impact
+                      <InfoTooltip title="Disparate Impact" description="Compares how often the AI approves people from different groups. Example: If the AI approves 80% of Men but only 40% of Women, the score is 0.5 (Bias Detected!). A fair AI scores close to 1.0." />
+                    </p>
                     <div className="flex items-center space-x-2">
                        <h3 className="text-2xl font-bold text-emerald-400">0.95</h3>
                        <CheckCircle className="w-5 h-5 text-emerald-500" />
@@ -421,7 +457,10 @@ export default function App() {
                     <p className="text-xs text-emerald-400/70 mt-2">Optimal range</p>
                   </div>
                   <div className="bg-slate-900/50 p-5 rounded-xl border border-emerald-500/20">
-                    <p className="text-sm text-slate-400 mb-1">Counterfactual Flips</p>
+                    <p className="text-sm text-slate-400 mb-1 flex items-center relative z-40">
+                      Counterfactual Flips
+                      <InfoTooltip title="Counterfactual Flips" description='The "What-If" test. We take a profile, secretly flip ONLY their sensitive trait (like changing Gender from Male to Female), and ask the AI again. If the AI changes its final decision, it proves the AI is actively biased!' />
+                    </p>
                     <div className="flex items-center space-x-2">
                        <h3 className="text-2xl font-bold text-emerald-400">1%</h3>
                        <CheckCircle className="w-5 h-5 text-emerald-500" />
@@ -432,7 +471,10 @@ export default function App() {
 
                 {/* Explainability Chart */}
                 <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-700 h-64">
-                   <h3 className="text-sm font-medium text-slate-300 mb-4">SHAP Feature Importance</h3>
+                   <h3 className="text-sm font-medium text-slate-300 mb-4 flex items-center relative z-40">
+                     SHAP Feature Importance
+                     <InfoTooltip title="SHAP Feature Importance" description="X-Ray vision! This chart shows exactly which columns the AI secretly cares about the most when making decisions. If 'Gender' or 'Race' is a massive bar at the top, the AI is severely biased." />
+                   </h3>
                    <ResponsiveContainer width="100%" height="100%">
                      <BarChart data={mitigatedData} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 20 }}>
                        <XAxis type="number" hide />
