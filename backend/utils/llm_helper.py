@@ -109,7 +109,10 @@ Explain that the sensitive attribute's influence has been successfully reduced."
 def _build_regression_prompt(metrics, score, is_baseline, is_combined) -> str:
     """Build prompt for regression model explanations."""
     mpg = metrics.get('mean_prediction_gap') or 0
-    mpg_norm = metrics.get('mpg_normalized') or metrics.get('worst_mpg_normalized', 1.0)
+    # FIX Bug 10: original order checked 'mpg_normalized' first, so combined-report key
+    # 'worst_mpg_normalized' was always shadowed, defaulting to 1.0 (= "100% fair").
+    # Prefer the combined-report key; fall back to single-model key.
+    mpg_norm = metrics.get('worst_mpg_normalized') or metrics.get('mpg_normalized') or 1.0
     cf_pct = metrics.get('counterfactual_pct_change') or metrics.get('max_counterfactual_pct_change', 0)
     cf_diff = metrics.get('counterfactual_avg_diff', 0)
     err_ratio = metrics.get('error_ratio') or metrics.get('worst_error_ratio', 1.0)
@@ -181,22 +184,47 @@ Rules:
 def detect_columns(df: pd.DataFrame, dataset_name: str = "", threshold: float = 20.0) -> dict:
     """
     Detect the target column (via Groq/LLM) and sensitive attribute(s) from a DataFrame.
+
+    When no true demographic/sensitive columns exist (e.g. a pure property-features
+    dataset) the detector will still pick the highest-scoring column available.
+    In that case the returned dict includes 'no_demographic_columns': True so the
+    frontend can warn the user that the audit may have limited fairness significance.
     """
-    # Step 1: Detect the target column using Groq context, fallback to heuristics
+    # Step 1: Detect target column via Groq, fallback to heuristics
     target_col = None
     if dataset_name:
         target_col = _detect_target_groq(df, dataset_name)
-        
     if not target_col:
         target_col = _detect_target_column(df)
 
-    # Step 2: run the sensitive attribute detector on all columns
+    # Step 2: Run sensitive attribute detector
     detector = SensitiveAttributeDetector(threshold=threshold)
     report = detector.analyse(df)
-    # Limit to top 2 sensitive attributes as requested
-    sensitive_cols = report.sensitive_columns[:2]
+    sensitive_cols = [c for c in report.sensitive_columns if c != target_col][:2]
 
-    # Step 3: pick the single "best" sensitive column
+    # True demographic categories: protected attributes that matter for fairness law
+    # 'location' alone (e.g., neighborhood, zip) is a proxy but not a direct demographic
+    TRUE_DEMOGRAPHIC_CATEGORIES = {'gender', 'race', 'religion', 'nationality', 'disability',
+                                   'income', 'education', 'marital', 'family', 'political'}
+
+    # High-confidence demographic: score >= 40 AND in a true protected category
+    high_conf = [
+        r.column for r in report.sensitive_results
+        if r.column != target_col
+        and r.score >= 40
+        and r.category in TRUE_DEMOGRAPHIC_CATEGORIES
+    ]
+    no_demographic_columns = len(high_conf) == 0
+
+    if no_demographic_columns:
+        print(
+            "[ColumnDetection] WARNING: No high-confidence demographic columns found. "
+            "The dataset may not contain protected attributes. "
+            "The fairness audit will use the best available grouping column, "
+            "but results have limited demographic fairness significance."
+        )
+
+    # Step 3: Pick the single best sensitive column (exclude target)
     best_sensitive = None
     for r in report.sensitive_results:
         if r.column != target_col:
@@ -206,15 +234,33 @@ def detect_columns(df: pd.DataFrame, dataset_name: str = "", threshold: float = 
     if best_sensitive is None and sensitive_cols:
         best_sensitive = sensitive_cols[0]
 
+    # Final safety: column with most group diversity (2-20 unique values)
+    if best_sensitive is None:
+        candidates = [c for c in df.columns if c != target_col]
+        if candidates:
+            best_sensitive = max(
+                candidates,
+                key=lambda c: df[c].nunique() if 2 <= df[c].nunique() <= 20 else 0,
+            )
+
+    final_sensitive_cols = sensitive_cols if sensitive_cols else ([best_sensitive] if best_sensitive else [])
+
     return {
-        "target_column":    target_col,
-        "sensitive_column": best_sensitive,
-        "sensitive_columns": sensitive_cols,
-        "detection_report": report.to_dict(),
+        "target_column":          target_col,
+        "sensitive_column":       best_sensitive,
+        "sensitive_columns":      final_sensitive_cols,
+        "detection_report":       report.to_dict(),
+        "no_demographic_columns": no_demographic_columns,
+        "demographic_warning": (
+            "This dataset does not appear to contain protected demographic attributes "
+            "(e.g. gender, race, age). The audit is using the best available grouping "
+            "column as a proxy. Fairness scores may not reflect real-world bias."
+        ) if no_demographic_columns else None,
     }
+
 
 
 # Backward-compat shim
 def detect_columns_with_groq(df: pd.DataFrame) -> dict:
     """Alias kept for backward compatibility — calls detect_columns() locally."""
-    return detect_columns(df)
+    return detect_columns(df)   

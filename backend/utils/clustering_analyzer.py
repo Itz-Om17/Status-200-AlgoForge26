@@ -231,11 +231,12 @@ def analyze_clustering_fairness(model_path: str, data_path: str, sensitive_colum
     # ==========================================
     # FAIRNESS SCORE CALCULATION
     # ==========================================
-    # Target: TVD > 0.8
-    # Flips < 5%
+    # Target: TVD > 0.8 (Base parity)
+    # Flips < 5% (Resilience)
+    # SHAP < 10% (Independence)
     
-    # Base score out of 100 on TVD
-    tvd_pts = min(tvd_score / 0.8, 1.0) * 100
+    # Base score out of 100 on TVD directly
+    tvd_pts = tvd_score * 100
     
     # Penalty for flips > 5%
     cf_penalty = 0
@@ -244,12 +245,12 @@ def analyze_clustering_fairness(model_path: str, data_path: str, sensitive_colum
         
     # Penalty for sensitive attribute driving clusters
     shap_penalty = 0
-    if tvd_score < 0.8 and shap_importance_sensitive > 0.1:
+    if shap_importance_sensitive > 0.1:
         shap_penalty = min(shap_importance_sensitive * 2.0, 1.0) * 30
         
     final_score = max(0, int(tvd_pts - cf_penalty - shap_penalty))
     
-    is_biased = bool(tvd_score < 0.8 or counterfactual_flips_pct > 10.0 or worst_error_ratio < 0.8)
+    is_biased = bool(tvd_score < 0.8 or counterfactual_flips_pct > 10.0 or worst_error_ratio < 0.8 or shap_importance_sensitive > 0.1)
 
     return {
         "fairness_score": final_score,

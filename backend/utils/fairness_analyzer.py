@@ -4,21 +4,56 @@ import shap
 import joblib
 
 
+class _ScaledModelWrapper:
+    """
+    Wraps a {model, scaler} dict so it behaves like a single sklearn estimator.
+    Applies scaler.transform() before model.predict() / predict_proba().
+    Without this, models trained on scaled features produce wildly wrong predictions.
+    """
+    def __init__(self, model, scaler, feature_names=None):
+        self.model = model
+        self.scaler = scaler
+        self.feature_names = feature_names
+        for attr in ('feature_importances_', 'coef_', 'n_features_in_', 'classes_'):
+            if hasattr(model, attr):
+                setattr(self, attr, getattr(model, attr))
+
+    def predict(self, X):
+        arr = X.values if isinstance(X, pd.DataFrame) else np.asarray(X)
+        return self.model.predict(self.scaler.transform(arr))
+
+    def predict_proba(self, X):
+        arr = X.values if isinstance(X, pd.DataFrame) else np.asarray(X)
+        return self.model.predict_proba(self.scaler.transform(arr))
+
+    def __repr__(self):
+        return f"_ScaledModelWrapper({type(self.model).__name__})"
+
+
 def _unwrap_model(obj):
-    """If the pkl contains a dict wrapping the model, extract the actual model."""
+    """
+    Extract (or wrap) the actual predictor from a pkl object.
+    Handles plain models, and dicts that may contain model + scaler.
+    """
     if not isinstance(obj, dict):
         return obj
-    # Try common dict keys
+    scaler = obj.get('scaler')
+    feature_names = obj.get('feature_names')
     for key in ['model', 'estimator', 'classifier', 'regressor', 'clf', 'pipeline', 'pipe']:
         if key in obj and hasattr(obj[key], 'predict'):
+            inner = obj[key]
+            if scaler is not None:
+                print(f"[Unwrap] Wrapping model+scaler (key='{key}')")
+                return _ScaledModelWrapper(inner, scaler, feature_names)
             print(f"[Unwrap] Extracted model from dict key '{key}'")
-            return obj[key]
-    # Try to find any value that has .predict()
+            return inner
     for key, val in obj.items():
         if hasattr(val, 'predict'):
+            if scaler is not None:
+                print(f"[Unwrap] Wrapping model+scaler (key='{key}')")
+                return _ScaledModelWrapper(val, scaler, feature_names)
             print(f"[Unwrap] Extracted model from dict key '{key}'")
             return val
-    # If nothing works, return the dict (will fail downstream with a clear error)
     return obj
 
 def analyze_fairness(model_path: str, data_path: str, target_column: str, sensitive_column: str) -> dict:
@@ -121,7 +156,10 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
                         if df_dummies.shape[1] == expected_n:
                             return m.predict(df_dummies.values)
                         elif df_dummies.shape[1] > expected_n:
-                            return m.predict(df_dummies.iloc[:, :expected_n].values)
+                            # FIX Bug 6: never truncate by position — align by name.
+                            # Slicing first N columns gives wrong features silently.
+                            df_aligned = df_dummies.reindex(columns=list(m.feature_names_in_), fill_value=0)
+                            return m.predict(df_aligned)
                         else:
                             pad_cols = pd.DataFrame(np.zeros((len(df_dummies), expected_n - df_dummies.shape[1])), index=df_dummies.index)
                             df_padded = pd.concat([df_dummies, pad_cols], axis=1)
@@ -241,18 +279,25 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
     
     final_score = max(0, int(di_score - cf_penalty - shap_penalty))
 
-    # Ensure it's visually a bit distinct based on user instructions
-    if disparate_impact < 0.8 and counterfactual_flips_pct > 0 and shap_importance_sensitive > 0.1:
-        # It's definitely biased, hardcap score around 40-50 for visual matching with "42%"
-        if final_score > 50:
-            final_score = int(final_score * 0.5)
+    # FIX Bug 5: removed hardcoded 0.5x cap that halved scores arbitrarily.
+    # The DI, CF, and SHAP penalties already encode bias magnitude mathematically.
+    # Let the formula speak — no aesthetic override needed.
 
+    preds_all = safe_predict(model, X)
+    
     return {
         "fairness_score": final_score,
         "disparate_impact": round(disparate_impact, 2),
         "counterfactual_flips": round(counterfactual_flips_pct, 1),
         "shap_values": shap_results,
-        "is_biased": bool(disparate_impact < 0.8 or counterfactual_flips_pct > 10.0)
+        "is_biased": bool(disparate_impact < 0.8 or counterfactual_flips_pct > 10.0),
+        "__internals__": {
+            "model": model,
+            "X": X,
+            "y_pred": preds_all,
+            "target": target_column,
+            "sensitive": sensitive_column
+        }
     }
 
 def __fallback_score(msg: str):

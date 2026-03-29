@@ -34,7 +34,7 @@ import pandas as pd
 
 SENSITIVE_KEYWORD_MAP: Dict[str, List[str]] = {
     "gender":      ["gender", "sex", "male", "female", "sexuality", "orientation"],
-    "age":         ["age", "dob", "birth", "born", "year_of_birth", "yob", "senior", "minor"],
+    # Removed 'age' from default sensitive parameters per request.
     "race":        ["race", "ethnicity", "ethnic", "racial", "caste", "tribe", "color", "origin"],
     "religion":    ["religion", "faith", "belief", "christian", "muslim", "hindu", "jewish", "sikh"],
     "nationality": ["nationality", "country", "citizen", "citizenship", "immigrant", "migrant"],
@@ -43,7 +43,8 @@ SENSITIVE_KEYWORD_MAP: Dict[str, List[str]] = {
     "education":   ["education", "degree", "qualification", "school", "college", "literacy", "diploma"],
     "marital":     ["marital", "marriage", "married", "single", "divorced", "widowed", "spouse"],
     "family":      ["children", "kids", "family", "dependent", "parental", "parent", "guardian"],
-    "location":    ["zip", "zipcode", "postal", "postcode", "district", "suburb", "neighborhood"],
+    "location":    ["zip", "zipcode", "postal", "postcode", "district", "suburb", "neighborhood",
+                    "neighbourhood", "region", "area", "zone", "community"],
     "political":   ["political", "party", "vote", "voter", "ideology", "affiliation"],
 }
 
@@ -220,8 +221,8 @@ def _entropy(series: pd.Series) -> float:
 def _numeric_range_flag(series: pd.Series) -> Tuple[bool, str]:
     mn, mx = series.min(), series.max()
     flags = []
-    if 0 <= mn <= 10 and 50 <= mx <= 120:
-        flags.append("age-range")
+    # FIX Bug 11: age-range check removed — age is intentionally excluded as sensitive attr.
+    # The old code had `pass` here, silently doing nothing while appearing to check something.
     if mn >= 1000 and mx >= 20_000:
         flags.append("income-range")
     if 10_000 <= mn and mx <= 99_999:
@@ -281,9 +282,8 @@ def _analyse_column(col_name: str, series: pd.Series) -> ColumnResult:
             weights["numeric_range"] = 12
             signals.append(f"Numeric range matches '{flag_label}'")
             if not category:
-                if "age-range" in flag_label:
-                    category = "age"
-                elif "income-range" in flag_label:
+                # FIX Bug 11: "age-range" branch removed (flag is never produced above).
+                if "income-range" in flag_label:
                     category = "income"
                 elif "zip-range" in flag_label:
                     category = "location"

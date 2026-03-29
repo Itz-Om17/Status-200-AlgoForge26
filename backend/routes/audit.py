@@ -63,27 +63,17 @@ def run_audit():
                 baseline_res, is_baseline=True, model_type=model_type
             )
 
-            # ── Step 2: Generate Mock Mitigated Results ──────────────────
-            mitigated_res = copy.deepcopy(baseline_res)
-            mitigated_res['fairness_score'] = 95
-
-            if model_type == 'regression':
-                mitigated_res['mpg_normalized'] = 0.97
-                mitigated_res['mean_prediction_gap'] = round(
-                    baseline_res.get('mean_prediction_gap', 0) * 0.1, 2
-                )
-                mitigated_res['counterfactual_pct_change'] = 0.8
-                mitigated_res['counterfactual_avg_diff'] = round(
-                    baseline_res.get('counterfactual_avg_diff', 0) * 0.05, 2
-                )
-                mitigated_res['error_ratio'] = 0.96
-            else:
-                mitigated_res['disparate_impact'] = 0.98
-                mitigated_res['counterfactual_flips'] = 0.5
+            # ── Step 2: Apply ROC Fairness Mitigation ──────────────────
+            from utils.mitigation_engine import apply_roc_mitigation
+            mitigated_res = apply_roc_mitigation(baseline_res, col, model_type)
 
             mitigated_res['explanation'] = generate_audit_explanation(
                 mitigated_res, is_baseline=False, model_type=model_type
             )
+            
+            # Remove internals so jsonify doesn't crash on DataFrames
+            if '__internals__' in baseline_res:
+                baseline_res.pop('__internals__', None)
 
             individual_results[col] = {
                 "baseline": baseline_res,
