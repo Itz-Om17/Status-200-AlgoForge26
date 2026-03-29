@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Blueprint, request, jsonify
 from utils.fairness_analyzer import analyze_fairness
 from utils.regression_analyzer import analyze_regression_fairness
@@ -67,6 +68,7 @@ def run_audit():
             from utils.mitigation_engine import apply_roc_mitigation
             mitigated_res = apply_roc_mitigation(baseline_res, col, model_type)
 
+            time.sleep(3)  # Avoid Groq rate limits between sequential calls
             mitigated_res['explanation'] = generate_audit_explanation(
                 mitigated_res, is_baseline=False, model_type=model_type
             )
@@ -110,6 +112,7 @@ def run_audit():
             }
 
         # Generate overall executive summary
+        time.sleep(3)  # Avoid Groq rate limits between sequential calls
         combined_results['explanation'] = generate_audit_explanation(
             combined_results, is_combined=True, model_type=model_type
         )

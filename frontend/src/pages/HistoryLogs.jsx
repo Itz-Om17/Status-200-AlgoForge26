@@ -28,7 +28,7 @@ export default function HistoryLogs() {
         );
         const snapshot = await getDocs(q);
         console.log("[History] Snapshot size:", snapshot.size);
-        
+
         const results = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -43,7 +43,7 @@ export default function HistoryLogs() {
 
         // Sort by timestamp descending in frontend
         results.sort((a, b) => b._ts - a._ts);
-        
+
         setLogs(results);
       } catch (err) {
         console.error("[History] Failed to fetch history logs:", err);
@@ -59,7 +59,7 @@ export default function HistoryLogs() {
     try {
       const logToDelete = logs.find(l => l.id === deleteId);
       await deleteDoc(doc(db, 'audits', deleteId));
-      
+
       // Optional: Cleanup Firebase Storage if URIs are present
       // if (logToDelete?.modelUrl) { /* deleteObject calls... */ }
 
@@ -74,7 +74,7 @@ export default function HistoryLogs() {
 
   const handleRestore = (audit) => {
     if (!audit.auditResults) return;
-    
+
     // If data is missing, the Modal's button is already disabled or hidden via conditional rendering
     const dashboardPayload = {
       auditResults: audit.auditResults,
@@ -89,7 +89,7 @@ export default function HistoryLogs() {
 
     // Update localStorage so refresh works
     localStorage.setItem('current_audit', JSON.stringify(dashboardPayload));
-    
+
     // Navigate to dashboard with state
     navigate('/dashboard', { state: dashboardPayload });
   };
@@ -101,19 +101,19 @@ export default function HistoryLogs() {
   };
 
   const filtered = logs.filter(item => {
-    const matchesSearch = 
+    const matchesSearch =
       (item.modelName && item.modelName.toLowerCase().includes(search.toLowerCase())) ||
       (item.datasetName && item.datasetName.toLowerCase().includes(search.toLowerCase())) ||
       (item.sensitiveAttr && item.sensitiveAttr.toLowerCase().includes(search.toLowerCase()));
     const matchesFilter = statusFilter === 'all' || item.status === statusFilter;
-    
+
     return matchesSearch && matchesFilter;
   });
 
   const getStatusIcon = (status) => {
-    if (status === 'passed') return <CheckCircle size={14} style={{color:'#10b981'}} />;
-    if (status === 'warning') return <AlertTriangle size={14} style={{color:'#f59e0b'}} />;
-    return <AlertTriangle size={14} style={{color:'#ef4444'}} />;
+    if (status === 'passed') return <CheckCircle size={14} style={{ color: '#10b981' }} />;
+    if (status === 'warning') return <AlertTriangle size={14} style={{ color: '#f59e0b' }} />;
+    return <AlertTriangle size={14} style={{ color: '#ef4444' }} />;
   };
 
   const getStatusClass = (status) => {
@@ -137,8 +137,8 @@ export default function HistoryLogs() {
       <div className="history-toolbar">
         <div className="history-search">
           <Search size={15} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Search by model, dataset, or attribute..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -172,8 +172,8 @@ export default function HistoryLogs() {
               </thead>
               <tbody>
                 {filtered.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     onClick={() => setSelectedAudit(item)}
                     style={{ cursor: 'pointer' }}
                     className="history-row-hover"
@@ -195,9 +195,9 @@ export default function HistoryLogs() {
                     <td>
                       <div className="history-score">
                         <div className="history-score-bar">
-                          <div className="history-score-fill" style={{width: `${item.fairnessScore}%`, background: getScoreColor(item.fairnessScore)}}></div>
+                          <div className="history-score-fill" style={{ width: `${item.fairnessScore}%`, background: getScoreColor(item.fairnessScore) }}></div>
                         </div>
-                        <span style={{color: getScoreColor(item.fairnessScore), fontWeight: 700}}>{item.fairnessScore}%</span>
+                        <span style={{ color: getScoreColor(item.fairnessScore), fontWeight: 700 }}>{item.fairnessScore}%</span>
                       </div>
                     </td>
                     <td>
@@ -207,10 +207,10 @@ export default function HistoryLogs() {
                       </span>
                     </td>
                     <td>
-                      <button 
+                      <button
                         onClick={(e) => {
-                           e.stopPropagation();
-                           setDeleteId(item.id);
+                          e.stopPropagation();
+                          setDeleteId(item.id);
                         }}
                         className="history-delete-btn"
                         style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', borderRadius: '4px', display: 'flex' }}
@@ -225,7 +225,7 @@ export default function HistoryLogs() {
             </table>
             {filtered.length === 0 && (
               <div className="history-empty">
-                <Search size={32} style={{color:'#ccc', marginBottom: '16px'}} />
+                <Search size={32} style={{ color: '#ccc', marginBottom: '16px' }} />
                 <p>No audits found yet!</p>
               </div>
             )}
@@ -244,13 +244,13 @@ export default function HistoryLogs() {
               Are you sure you want to delete this audit from your history? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setDeleteId(null)}
                 style={{ flex: 1, padding: '12px', borderRadius: '8px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontWeight: 600, cursor: 'pointer' }}
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleDelete}
                 style={{ flex: 1, padding: '12px', borderRadius: '8px', background: '#ef4444', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}
               >
@@ -266,48 +266,48 @@ export default function HistoryLogs() {
           <div className="modal-card" style={{ maxWidth: '450px', padding: '32px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
               <div>
-                 <h2 style={{ color: '#f8fafc', fontSize: '20px', fontWeight: 600, marginBottom: '6px' }}>Audit Details</h2>
-                 <p style={{ color: '#94a3b8', fontSize: '13px' }}>Saved on {selectedAudit.date}</p>
+                <h2 style={{ color: '#f8fafc', fontSize: '20px', fontWeight: 600, marginBottom: '6px' }}>Audit Details</h2>
+                <p style={{ color: '#94a3b8', fontSize: '13px' }}>Saved on {selectedAudit.date}</p>
               </div>
               <button onClick={() => setSelectedAudit(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '20px' }}>✕</button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
-               <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Model & Data</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', fontSize: '14px', marginBottom: '4px' }}>
-                    <FileText size={14} color="#818cf8" /> {selectedAudit.modelName}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '13px' }}>
-                    <Clock size={14} /> {selectedAudit.datasetName}
-                  </div>
-               </div>
+              <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
+                <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Model & Data</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#e2e8f0', fontSize: '14px', marginBottom: '4px' }}>
+                  <FileText size={14} color="#818cf8" /> {selectedAudit.modelName}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '13px' }}>
+                  <Clock size={14} /> {selectedAudit.datasetName}
+                </div>
+              </div>
 
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
-                     <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Fairness</div>
-                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: getScoreColor(selectedAudit.fairnessScore) }}>
-                       {selectedAudit.fairnessScore}%
-                     </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Fairness</div>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: getScoreColor(selectedAudit.fairnessScore) }}>
+                    {selectedAudit.fairnessScore}%
                   </div>
-                  <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
-                     <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Status</div>
-                     <span className={getStatusClass(selectedAudit.status)} style={{ display: 'inline-flex', marginTop: '4px' }}>
-                        {selectedAudit.status.toUpperCase()}
-                     </span>
-                  </div>
-               </div>
+                </div>
+                <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '8px' }}>Status</div>
+                  <span className={getStatusClass(selectedAudit.status)} style={{ display: 'inline-flex', marginTop: '4px' }}>
+                    {selectedAudit.status.toUpperCase()}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setSelectedAudit(null)}
                 style={{ flex: 1, padding: '12px', borderRadius: '8px', background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', fontWeight: 600, cursor: 'pointer' }}
               >
                 Close
               </button>
               {selectedAudit.auditResults ? (
-                <button 
+                <button
                   onClick={() => handleRestore(selectedAudit)}
                   className="confirm-btn"
                   style={{ flex: 2, padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}

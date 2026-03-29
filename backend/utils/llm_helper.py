@@ -7,6 +7,7 @@ Handles:
 """
 
 import os
+import time
 import pandas as pd
 from utils.sensitive_detector import (
     SensitiveAttributeDetector,
@@ -44,15 +45,28 @@ def generate_audit_explanation(
         prompt = _build_classification_prompt(metrics, score, is_baseline, is_combined)
 
     try:
-        completion = _groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=150
-        )
-        return completion.choices[0].message.content.strip()
+        for attempt in range(5):
+            try:
+                completion = _groq_client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.3,
+                    max_tokens=150
+                )
+                return completion.choices[0].message.content.strip()
+            except Exception as inner_e:
+                inner_msg = str(inner_e)
+                print(f"[Groq Diagnostic] Attempt {attempt + 1}/5 failed: {inner_msg}")
+                if "rate_limit" in inner_msg.lower() or "429" in inner_msg:
+                    wait = 3 * (2 ** attempt)  # 3s, 6s, 12s, 24s, 48s
+                    print(f"[Groq] Rate limited. Waiting {wait}s before retry...")
+                    time.sleep(wait)
+                else:
+                    raise  # Non-rate-limit errors fail immediately
+        return "AI Insight could not be generated at this moment."
     except Exception as e:
-        print(f"Explanation extraction error: {str(e)}")
+        error_msg = str(e)
+        print(f"[Groq Diagnostic] AI Generation failed: {error_msg}")
         return "AI Insight could not be generated at this moment."
 
 
