@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, DownloadCloud, ShieldCheck, Activity, Info, Database, Brain } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import FloatingChat from '../components/FloatingChat';
 
 const InfoTooltip = ({ title, description, position = "top" }) => (
   <div className="relative flex items-center group/tooltip ml-2" style={{ display: 'inline-flex' }}>
     <Info style={{ width: 14, height: 14, color: '#64748b', cursor: 'pointer' }} />
-    <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 transform -translate-x-1/2 hidden group-hover/tooltip:block bg-[#0f172a] border border-[#334155] text-[#e2e8f0] text-xs rounded-xl p-3 w-64 shadow-2xl z-50`}>
+    <div className={`absolute ${position === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 transform -translate-x-1/2 hidden group-hover/tooltip:block bg-[#0f172a] border border-[#334155] text-[#e2e8f0] text-xs rounded-xl shadow-2xl z-50`} style={{ padding: '12px', boxSizing: 'border-box', width: '256px' }}>
       <p className="font-bold text-[#818cf8] mb-1">{title}</p>
       <p style={{ lineHeight: 1.5 }}>{description}</p>
     </div>
@@ -484,7 +485,7 @@ export default function AuditPanel() {
             <div style={{display: 'flex', gap: '16px', marginTop: '28px'}}>
               <button 
                 onClick={() => handleSecureDownload(
-                  datasetUrl || `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
+                  `http://127.0.0.1:5000/api/download/data?data_file=${encodeURIComponent(datasetFileName)}&model_file=${encodeURIComponent(modelFileName)}&target_column=${encodeURIComponent(detectedTarget)}&sensitive_column=${encodeURIComponent(detectedSensitiveCols[0] || '')}&data_url=${encodeURIComponent(datasetUrl || '')}&model_url=${encodeURIComponent(modelUrl || '')}`,
                   `Mitigated_${datasetFileName}`,
                   "Exporting Mitigated Dataset...",
                   "Dataset Downloaded Successfully!"
@@ -513,6 +514,23 @@ export default function AuditPanel() {
           </div>
         </div>
       </div>
+
+      {/* Floating AI Chat */}
+      {(() => {
+        const firstCol = detectedSensitiveCols[0];
+        const firstResult = firstCol ? (auditResults.individual_results || {})[firstCol] : null;
+        return (
+          <FloatingChat context={{
+            target: detectedTarget,
+            sensitive: firstCol || 'Unknown',
+            model_type: detectedModelType || 'classification',
+            model_file: modelFileName || 'Unknown',
+            dataset_file: datasetFileName || 'Unknown',
+            baseline: firstResult?.baseline || {},
+            mitigated: firstResult?.mitigated || {}
+          }} />
+        );
+      })()}
     </>
   );
 }

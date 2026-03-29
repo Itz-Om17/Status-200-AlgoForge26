@@ -321,9 +321,26 @@ def download_data():
     model_filename   = secure_filename(request.args.get("model_file", ""))
     target_column    = request.args.get("target_column")
     sensitive_column = request.args.get("sensitive_column")
+    data_url         = request.args.get("data_url")
+    model_url        = request.args.get("model_url")
 
     data_path  = os.path.join(UPLOAD_FOLDER, data_filename)
     model_path = os.path.join(UPLOAD_FOLDER, model_filename) if model_filename else ""
+
+    import urllib.request
+    if not os.path.exists(data_path) and data_url:
+        try:
+            print(f"[Download] Fetching data from Cloudinary: {data_url}")
+            urllib.request.urlretrieve(data_url, data_path)
+        except Exception as e:
+            print(f"[Download] Error fetching data: {e}")
+
+    if model_filename and not os.path.exists(model_path) and model_url:
+        try:
+            print(f"[Download] Fetching model from Cloudinary: {model_url}")
+            urllib.request.urlretrieve(model_url, model_path)
+        except Exception as e:
+            print(f"[Download] Error fetching model: {e}")
 
     if not os.path.exists(data_path):
         return jsonify({"error": "Data file not found on server."}), 404
@@ -354,9 +371,26 @@ def download_wrapper():
     data_filename    = secure_filename(request.args.get("data_file", "data.csv"))
     sensitive_column = request.args.get("sensitive_column", "Unknown")
     target_column    = request.args.get("target_column", "Unknown")
+    data_url         = request.args.get("data_url")
+    model_url        = request.args.get("model_url")
 
     model_path = os.path.join(UPLOAD_FOLDER, model_filename)
     data_path  = os.path.join(UPLOAD_FOLDER, data_filename)
+
+    import urllib.request
+    if not os.path.exists(data_path) and data_url:
+        try:
+            print(f"[Download] Fetching data from Cloudinary: {data_url}")
+            urllib.request.urlretrieve(data_url, data_path)
+        except Exception as e:
+            print(f"[Download] Error fetching data: {e}")
+
+    if not os.path.exists(model_path) and model_url:
+        try:
+            print(f"[Download] Fetching model from Cloudinary: {model_url}")
+            urllib.request.urlretrieve(model_url, model_path)
+        except Exception as e:
+            print(f"[Download] Error fetching model: {e}")
 
     if not os.path.exists(model_path):
         return jsonify({"error": "Model file not found on server."}), 404
