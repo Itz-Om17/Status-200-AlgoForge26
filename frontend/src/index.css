@@ -787,6 +787,11 @@ html, body, #root {
   border-color: #bbf7d0;
 }
 
+.metric-card.indigo {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
 .metric-label {
   font-size: 10px;
   color: #888;
@@ -806,6 +811,7 @@ html, body, #root {
 
 .metric-value.red { color: #ef4444; }
 .metric-value.green { color: #10b981; }
+.metric-value.indigo { color: #6366f1; }
 
 .metric-icon {
   width: 14px;
@@ -1743,6 +1749,7 @@ html, body, #root {
 .dark-theme .metric-label { color: #777; }
 .dark-theme .metric-card.red { background: #1a1212; border-color: #2d1515; }
 .dark-theme .metric-card.green { background: #0f1a14; border-color: #152d1c; }
+.dark-theme .metric-card.indigo { background: #131328; border-color: #1e1b4b; }
 .dark-theme .chart-box { background: #1a1a1a; border-color: #2a2a2a; }
 .dark-theme .chart-title { color: #666; }
 

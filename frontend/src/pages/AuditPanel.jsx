@@ -288,11 +288,11 @@ export default function AuditPanel() {
                     <ResponsiveContainer width="100%" height="85%">
                       <BarChart data={baselineData} layout="vertical" margin={{ top: 0, right: 0, left: 5, bottom: 0 }}>
                         <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 10, fontWeight: 500}} width={85} />
-                        <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#111', fontSize: '11px'}} />
+                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11, fontWeight: 500}} width={85} />
+                        <Tooltip cursor={{fill: 'rgba(99, 102, 241, 0.08)'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #6366f1', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)'}} labelStyle={{color: '#fff', fontWeight: 700, fontSize: '12px', marginBottom: '4px'}} itemStyle={{color: '#c7d2fe', fontSize: '11px', fontWeight: 500}} />
                         <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                           {baselineData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.name === colName ? '#ef4444' : '#1f2937'} />
+                            <Cell key={`cell-${index}`} fill={entry.name === colName ? '#ef4444' : '#6366f1'} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -361,45 +361,18 @@ export default function AuditPanel() {
                     <ResponsiveContainer width="100%" height="85%">
                       <BarChart data={mitigatedData} layout="vertical" margin={{ top: 0, right: 0, left: 5, bottom: 0 }}>
                         <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 10, fontWeight: 500}} width={85} />
-                        <Tooltip cursor={{fill: '#f9fafb'}} contentStyle={{backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#111', fontSize: '11px'}} />
+                        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#cbd5e1', fontSize: 11, fontWeight: 500}} width={85} />
+                        <Tooltip cursor={{fill: 'rgba(16, 185, 129, 0.08)'}} contentStyle={{backgroundColor: '#0f172a', border: '1px solid #10b981', borderRadius: '10px', padding: '10px 14px', boxShadow: '0 10px 25px rgba(0,0,0,0.4)'}} labelStyle={{color: '#fff', fontWeight: 700, fontSize: '12px', marginBottom: '4px'}} itemStyle={{color: '#a7f3d0', fontSize: '11px', fontWeight: 500}} />
                         <Bar dataKey="importance" radius={[0, 4, 4, 0]}>
                           {mitigatedData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.name === colName ? '#10b981' : '#1f2937'} />
+                            <Cell key={`cell-${index}`} fill={entry.name === colName ? '#10b981' : '#3b82f6'} />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
 
-                  <div style={{display: 'flex', gap: '16px', marginTop: '24px'}}>
-                    <button 
-                      onClick={() => handleSecureDownload(
-                        datasetUrl || `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
-                        `Mitigated_${datasetFileName}`,
-                        "Exporting Mitigated Dataset...",
-                        "Dataset Downloaded Successfully!"
-                      )}
-                      className="confirm-btn" 
-                      style={{flex: 1, backgroundColor: '#064e3b', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '8px', border: '1px solid #059669', cursor: 'pointer', fontWeight: 600}}
-                    >
-                      <DownloadCloud size={18} />
-                      <span style={{fontSize: '13px'}}>Export Fair Dataset (.csv)</span>
-                    </button>
-                    <button 
-                      onClick={() => handleSecureDownload(
-                        modelUrl || `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
-                        "FairAI_Enterprise_Wrapper.zip",
-                        "Packaging Enterprise Wrapper...",
-                        "Wrapper Downloaded Successfully!"
-                      )}
-                      className="confirm-btn" 
-                      style={{flex: 1, backgroundColor: '#1e1b4b', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '8px', border: '1px solid #7c3aed', cursor: 'pointer', fontWeight: 600}}
-                    >
-                      <DownloadCloud size={18} />
-                      <span style={{fontSize: '13px'}}>Deploy Model Wrapper (.zip)</span>
-                    </button>
-                  </div>
+
 
                 </div>
               </div>
@@ -417,13 +390,13 @@ export default function AuditPanel() {
             <div style={{display: 'flex', justifyContent: 'center', marginBottom: '32px'}}>
               <div className="score-wrapper" style={{background: 'transparent', padding: 0}}>
                 <div className="score-circle">
-                  <svg width="160" height="160" style={{transform: 'rotate(-90deg)'}}>
-                    <circle cx="80" cy="80" r="70" stroke="#1e293b" strokeWidth="12" fill="transparent" />
-                    <circle cx="80" cy="80" r="70" stroke={(auditResults.combined_results?.overall_fairness_score || 0) < 70 ? '#ef4444' : '#6366f1'} strokeWidth="12" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((440 * (auditResults.combined_results?.overall_fairness_score || 0)) / 100)} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1s ease-out'}} />
+                  <svg width="260" height="260" style={{transform: 'rotate(-90deg)'}}>
+                    <circle cx="130" cy="130" r="110" stroke="#1e293b" strokeWidth="14" fill="transparent" />
+                    <circle cx="130" cy="130" r="110" stroke={(auditResults.combined_results?.overall_fairness_score || 0) < 70 ? '#ef4444' : '#6366f1'} strokeWidth="14" fill="transparent" strokeDasharray="691" strokeDashoffset={691 - ((691 * (auditResults.combined_results?.overall_fairness_score || 0)) / 100)} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1s ease-out'}} />
                   </svg>
                   <div className="score-text">
-                    <span style={{fontSize: '48px', fontWeight: '900', color: '#fff'}}>{Math.round(auditResults.combined_results?.overall_fairness_score || 0)}%</span>
-                    <span style={{fontSize: '14px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7d2fe', marginTop: '4px'}}>
+                    <span style={{fontSize: '56px', fontWeight: '900', color: '#fff'}}>{Math.round(auditResults.combined_results?.overall_fairness_score || 0)}%</span>
+                    <span style={{fontSize: '15px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#c7d2fe', marginTop: '4px'}}>
                       {detectedModelType === 'clustering' ? 'Overall Parity' : 'Overall Fairness'}
                     </span>
                   </div>
@@ -505,6 +478,36 @@ export default function AuditPanel() {
                   </>
                 )}
               </div>
+            </div>
+
+            {/* Download Buttons — shown once below combined report */}
+            <div style={{display: 'flex', gap: '16px', marginTop: '28px'}}>
+              <button 
+                onClick={() => handleSecureDownload(
+                  datasetUrl || `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
+                  `Mitigated_${datasetFileName}`,
+                  "Exporting Mitigated Dataset...",
+                  "Dataset Downloaded Successfully!"
+                )}
+                className="confirm-btn" 
+                style={{flex: 1, backgroundColor: '#064e3b', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: '1px solid #059669', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}
+              >
+                <DownloadCloud size={18} />
+                <span>Export Fair Dataset (.csv)</span>
+              </button>
+              <button 
+                onClick={() => handleSecureDownload(
+                  modelUrl || `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
+                  "FairAI_Enterprise_Wrapper.zip",
+                  "Packaging Enterprise Wrapper...",
+                  "Wrapper Downloaded Successfully!"
+                )}
+                className="confirm-btn" 
+                style={{flex: 1, backgroundColor: '#1e1b4b', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px', borderRadius: '12px', border: '1px solid #7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: '14px'}}
+              >
+                <DownloadCloud size={18} />
+                <span>Deploy Model Wrapper (.zip)</span>
+              </button>
             </div>
 
           </div>
