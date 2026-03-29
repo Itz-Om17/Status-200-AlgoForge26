@@ -256,15 +256,17 @@ export default function AuditPanel() {
                     </div>
                     <div className={`metric-card ${t2IsBad ? 'red' : 'green'}`} style={{position: 'relative'}}>
                       <div className="metric-label" style={{display: 'flex', alignItems: 'center'}}>{t2Label} <InfoTooltip title={t2Label} description={t2Tooltip} /></div>
-                      <div className="metric-value-row" style={{marginBottom: colIsRegression && baseline.counterfactual_avg_diff !== undefined ? '24px' : '0'}}>
+                      <div className="metric-value-row">
                         <span className={`metric-value ${t2IsBad ? 'red' : 'green'}`}>{t2Display}%</span>
                         {t2IsBad ? <AlertTriangle className="metric-icon" style={{color:'#ef4444'}} /> : <CheckCircle className="metric-icon" style={{color:'#10b981'}} />}
                       </div>
                       <div className={`metric-note ${t2IsBad ? 'red' : 'green'}`} style={{marginTop: '8px'}}>{t2IsBad ? t2BadLabel : t2GoodLabel}</div>
                       {colIsRegression && baseline.counterfactual_avg_diff !== undefined && (
-                        <p style={{fontSize: '11px', color: '#64748b', fontWeight: '500', backgroundColor: 'rgba(30, 41, 59, 0.5)', display: 'inline-block', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(51, 65, 85, 0.5)', position: 'absolute', bottom: '16px', left: '24px', margin: 0}}>
-                          Abs diff: {typeof baseline.counterfactual_avg_diff === 'number' ? baseline.counterfactual_avg_diff.toLocaleString() : baseline.counterfactual_avg_diff}
-                        </p>
+                        <div style={{marginTop: '12px'}}>
+                          <p style={{fontSize: '11px', color: '#64748b', fontWeight: '500', backgroundColor: 'rgba(30, 41, 59, 0.5)', display: 'inline-block', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(51, 65, 85, 0.5)', margin: 0}}>
+                            Abs diff: {typeof baseline.counterfactual_avg_diff === 'number' ? baseline.counterfactual_avg_diff.toLocaleString() : baseline.counterfactual_avg_diff}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -344,15 +346,17 @@ export default function AuditPanel() {
                     </div>
                     <div className="metric-card green" style={{position: 'relative'}}>
                       <div className="metric-label">{t2Label}</div>
-                      <div className="metric-value-row" style={{marginBottom: colIsRegression && mitigated.counterfactual_avg_diff !== undefined ? '24px' : '0'}}>
+                      <div className="metric-value-row">
                         <span className="metric-value green">{mt2Display}%</span>
                         <CheckCircle className="metric-icon" style={{color:'#10b981'}} />
                       </div>
                       <div className="metric-note green" style={{marginTop: '8px'}}>Robust decisions</div>
                       {colIsRegression && mitigated.counterfactual_avg_diff !== undefined && (
-                        <p style={{fontSize: '11px', color: '#64748b', fontWeight: '500', backgroundColor: 'rgba(30, 41, 59, 0.5)', display: 'inline-block', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.2)', position: 'absolute', bottom: '16px', left: '24px', margin: 0}}>
-                          Abs diff: {typeof mitigated.counterfactual_avg_diff === 'number' ? mitigated.counterfactual_avg_diff.toLocaleString() : mitigated.counterfactual_avg_diff}
-                        </p>
+                        <div style={{marginTop: '12px'}}>
+                          <p style={{fontSize: '11px', color: '#64748b', fontWeight: '500', backgroundColor: 'rgba(30, 41, 59, 0.5)', display: 'inline-block', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.2)', margin: 0}}>
+                            Abs diff: {typeof mitigated.counterfactual_avg_diff === 'number' ? mitigated.counterfactual_avg_diff.toLocaleString() : mitigated.counterfactual_avg_diff}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -1,12 +1,152 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
+  Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
+// ── Curated color palette for charts ────────────────────────────────────────
+const CHART_COLORS = [
+  '#818cf8', '#f472b6', '#34d399', '#fbbf24', '#fb7185',
+  '#38bdf8', '#a78bfa', '#f87171', '#4ade80', '#facc15',
+  '#2dd4bf', '#c084fc', '#fb923c', '#22d3ee', '#e879f9',
+];
+
+// ── Inline Chart component ──────────────────────────────────────────────────
+function InlineChart({ chart }) {
+  const { type, title, data } = chart;
+
+  if (!data || data.length === 0) return null;
+
+  const total = data.reduce((sum, d) => sum + d.value, 0);
+
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+      borderRadius: '14px',
+      padding: '16px',
+      marginTop: '10px',
+      border: '1px solid rgba(99, 102, 241, 0.25)',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+    }}>
+      <p style={{
+        fontSize: '12px',
+        fontWeight: 700,
+        color: '#c7d2fe',
+        textTransform: 'uppercase',
+        letterSpacing: '0.06em',
+        marginBottom: '12px',
+        textAlign: 'center',
+      }}>
+        {title}
+      </p>
+
+      {type === 'pie' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <ResponsiveContainer width="100%" height={180}>
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={65}
+                innerRadius={30}
+                paddingAngle={3}
+                strokeWidth={0}
+                label={({ name, value }) => `${name} (${((value / total) * 100).toFixed(1)}%)`}
+                labelLine={{ stroke: '#475569', strokeWidth: 1 }}
+                style={{ fontSize: '10px', fill: '#cbd5e1' }}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #6366f1',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+                }}
+                labelStyle={{ color: '#fff', fontWeight: 700, fontSize: '11px' }}
+                itemStyle={{ color: '#c7d2fe', fontSize: '11px' }}
+                formatter={(value) => [`${value} (${((value / total) * 100).toFixed(1)}%)`, 'Count']}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          {/* Legend below chart */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px 12px',
+            justifyContent: 'center',
+            marginTop: '4px',
+          }}>
+            {data.map((entry, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: CHART_COLORS[i % CHART_COLORS.length],
+                  flexShrink: 0,
+                }} />
+                <span style={{ fontSize: '10px', color: '#94a3b8' }}>
+                  {entry.name}: {entry.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        /* Bar chart */
+        <ResponsiveContainer width="100%" height={Math.max(140, data.length * 30)}>
+          <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 4, bottom: 0 }}>
+            <XAxis type="number" hide />
+            <YAxis
+              type="category"
+              dataKey="name"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#cbd5e1', fontSize: 10, fontWeight: 500 }}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #6366f1',
+                borderRadius: '10px',
+                padding: '8px 12px',
+                boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+              }}
+              labelStyle={{ color: '#fff', fontWeight: 700, fontSize: '11px' }}
+              itemStyle={{ color: '#c7d2fe', fontSize: '11px' }}
+              formatter={(value) => [`${value} (${((value / total) * 100).toFixed(1)}%)`, 'Count']}
+            />
+            <Bar dataKey="value" radius={[0, 6, 6, 0]}>
+              {data.map((_, i) => (
+                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
+
+// ── Main FloatingChat component ─────────────────────────────────────────────
 export default function FloatingChat({ context }) {
   const { currentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hi! I am your FairAI Enterprise Analyst. Ask me anything about this fairness audit, such as "Why did Disparate Impact improve?" or "What features are most influential?"' }
+    {
+      role: 'assistant',
+      content: 'Hi! I am your FairAI Enterprise Analyst. Ask me anything about this fairness audit — formulas, metrics, or even "Show me the distribution of gender in a pie chart!"',
+    }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +191,16 @@ export default function FloatingChat({ context }) {
       
       if (!response.ok) throw new Error(data.error || 'API Error');
 
-      setMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+      // Build assistant message with optional charts
+      const assistantMsg = {
+        role: 'assistant',
+        content: data.reply,
+      };
+      if (data.charts && data.charts.length > 0) {
+        assistantMsg.charts = data.charts;
+      }
+
+      setMessages([...newMessages, assistantMsg]);
     } catch (err) {
       console.error('Chat error:', err);
       setMessages([...newMessages, { role: 'assistant', content: `Error: ${err.message}` }]);
@@ -68,8 +217,8 @@ export default function FloatingChat({ context }) {
           position: 'absolute',
           bottom: '70px',
           right: '0',
-          width: '380px',
-          height: '500px',
+          width: '400px',
+          height: '560px',
           background: '#fff',
           borderRadius: '16px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
@@ -90,6 +239,17 @@ export default function FloatingChat({ context }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Bot size={20} style={{ color: '#38bdf8' }} />
               <span style={{ fontWeight: 600, fontSize: '15px' }}>FairAI Chat</span>
+              <span style={{
+                fontSize: '9px',
+                fontWeight: 600,
+                padding: '2px 6px',
+                borderRadius: '9999px',
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                color: '#a5b4fc',
+                letterSpacing: '0.04em',
+              }}>
+                📊 Charts
+              </span>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
@@ -106,27 +266,37 @@ export default function FloatingChat({ context }) {
                 display: 'flex',
                 gap: '8px',
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '85%'
+                maxWidth: '90%'
               }}>
                 {msg.role === 'assistant' && (
                   <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px' }}>
                     <Bot size={14} color="#475569" />
                   </div>
                 )}
-                <div style={{
-                  background: msg.role === 'user' ? '#111' : '#fff',
-                  color: msg.role === 'user' ? '#fff' : '#1e293b',
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  borderTopRightRadius: msg.role === 'user' ? '4px' : '12px',
-                  borderTopLeftRadius: msg.role === 'assistant' ? '4px' : '12px',
-                  fontSize: '13.5px',
-                  lineHeight: '1.5',
-                  boxShadow: msg.role === 'user' ? 'none' : '0 2px 4px rgba(0,0,0,0.02), 0 0 0 1px rgba(0,0,0,0.05)',
-                  wordBreak: 'break-word',
-                  whiteSpace: 'pre-wrap'
-                }}>
-                  {msg.content}
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                  <div style={{
+                    background: msg.role === 'user' ? '#111' : '#fff',
+                    color: msg.role === 'user' ? '#fff' : '#1e293b',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    borderTopRightRadius: msg.role === 'user' ? '4px' : '12px',
+                    borderTopLeftRadius: msg.role === 'assistant' ? '4px' : '12px',
+                    fontSize: '13.5px',
+                    lineHeight: '1.5',
+                    boxShadow: msg.role === 'user' ? 'none' : '0 2px 4px rgba(0,0,0,0.02), 0 0 0 1px rgba(0,0,0,0.05)',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {msg.content}
+                  </div>
+                  {/* Render inline charts if present */}
+                  {msg.charts && msg.charts.length > 0 && (
+                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {msg.charts.map((chart, ci) => (
+                        <InlineChart key={ci} chart={chart} />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {msg.role === 'user' && (
                   <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px', overflow: 'hidden' }}>
@@ -166,7 +336,7 @@ export default function FloatingChat({ context }) {
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask about this audit..."
+              placeholder="Ask about metrics or request a chart..."
               style={{
                 flex: 1,
                 border: '1px solid #e2e8f0',

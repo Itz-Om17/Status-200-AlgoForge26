@@ -1,9 +1,114 @@
 import os
+import re
+import pandas as pd
 from flask import Blueprint, request, jsonify
 from utils.llm_helper import _groq_client
 
 chat_bp = Blueprint('chat', __name__)
 
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads')
+
+
+# ── Dataset distribution helper ──────────────────────────────────────────────
+
+def _compute_column_distributions(data_file: str) -> dict:
+    """
+    Read the uploaded CSV and compute value_counts for columns with ≤ 30
+    unique values (categorical / low-cardinality). Returns a dict of
+    { column_name: { value: count, ... }, ... } plus dataset_shape.
+    """
+    path = os.path.join(UPLOAD_FOLDER, data_file)
+    if not os.path.exists(path):
+        return {}
+
+    try:
+        df = pd.read_csv(path)
+    except Exception:
+        return {}
+
+    distributions = {}
+    for col in df.columns:
+        nunique = df[col].nunique(dropna=True)
+        if 2 <= nunique <= 30:
+            counts = df[col].value_counts(dropna=True).to_dict()
+            # Convert numpy types to native Python for JSON serialization
+            distributions[col] = {str(k): int(v) for k, v in counts.items()}
+
+    return {
+        "shape": {"rows": len(df), "columns": len(df.columns)},
+        "column_names": list(df.columns),
+        "distributions": distributions,
+    }
+
+
+def _build_distribution_prompt(data_stats: dict) -> str:
+    """Format dataset distributions for the system prompt."""
+    if not data_stats or not data_stats.get("distributions"):
+        return ""
+
+    lines = [
+        f"\n=== DATASET SUMMARY (for visualization) ===",
+        f"Rows: {data_stats['shape']['rows']}, Columns: {data_stats['shape']['columns']}",
+        f"All columns: {', '.join(data_stats['column_names'])}",
+        f"",
+        f"Column Distributions (categorical / low-cardinality):",
+    ]
+
+    for col, dist in data_stats["distributions"].items():
+        entries = ", ".join([f"{k}={v}" for k, v in dist.items()])
+        lines.append(f"  {col}: {entries}")
+
+    lines.append("")
+    lines.append("VISUALIZATION INSTRUCTIONS:")
+    lines.append("When the user asks to SHOW, VISUALIZE, PLOT, CHART or display data distributions:")
+    lines.append("1. Write a brief text explanation first.")
+    lines.append("2. Then on a NEW LINE, include EXACTLY ONE chart marker per chart in this format:")
+    lines.append("   <<CHART:pie:ColumnName:Chart Title>>   for pie charts")
+    lines.append("   <<CHART:bar:ColumnName:Chart Title>>   for bar charts")
+    lines.append("3. You can include multiple chart markers if the user asks for multiple charts.")
+    lines.append("4. Use ONLY column names that exist in the dataset above.")
+    lines.append("5. Choose 'pie' for columns with ≤6 categories, 'bar' for more.")
+    lines.append("6. Example: <<CHART:pie:Sex:Distribution of Sex in Dataset>>")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def _extract_charts(answer: str, data_stats: dict) -> tuple:
+    """
+    Parse the LLM response for <<CHART:type:column:title>> markers.
+    Returns (cleaned_text, list_of_chart_dicts).
+    """
+    charts = []
+    pattern = r'<<CHART:(pie|bar):([^:]+):([^>]+)>>'
+
+    distributions = data_stats.get("distributions", {}) if data_stats else {}
+
+    for match in re.finditer(pattern, answer):
+        chart_type = match.group(1)
+        col_name = match.group(2).strip()
+        title = match.group(3).strip()
+
+        # Look up actual distribution data
+        dist = distributions.get(col_name)
+        if dist:
+            chart_data = [{"name": str(k), "value": int(v)} for k, v in dist.items()]
+            charts.append({
+                "type": chart_type,
+                "title": title,
+                "column": col_name,
+                "data": chart_data,
+            })
+
+    # Remove chart markers from the text
+    cleaned = re.sub(pattern, '', answer).strip()
+    # Clean up any double newlines left behind
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+
+    return cleaned, charts
+
+
+# ── Formula section builder (unchanged) ──────────────────────────────────────
 
 def _build_formula_section(model_type, baseline, mitigated):
     """
@@ -128,6 +233,8 @@ def _build_formula_section(model_type, baseline, mitigated):
 """
 
 
+# ── Main chat route ──────────────────────────────────────────────────────────
+
 @chat_bp.route('/api/chat', methods=['POST'])
 def chat_with_data():
     if not _groq_client:
@@ -143,6 +250,7 @@ def chat_with_data():
     baseline = context.get('baseline', {})
     mitigated = context.get('mitigated', {})
     model_type = context.get('model_type', 'classification')
+    dataset_file = context.get('dataset_file', '')
 
     # Build SHAP feature lists
     baseline_shap = baseline.get('shap_values', [])
@@ -152,6 +260,10 @@ def chat_with_data():
 
     # Build dynamic formula reference
     formula_section = _build_formula_section(model_type, baseline, mitigated)
+
+    # Compute dataset distributions for chart generation
+    data_stats = _compute_column_distributions(dataset_file) if dataset_file else {}
+    distribution_prompt = _build_distribution_prompt(data_stats)
 
     system_prompt = f"""You are the FairAI Enterprise Assistant, an AI expert in algorithmic fairness and bias mitigation.
 The user is viewing their fairness audit report for a machine learning model.
@@ -189,6 +301,8 @@ Mitigated Model (After Bias Correction):
   - Feature Importances (top 5): {mitigated_shap_str}
   {f"- Mean Prediction Gap: {mitigated.get('mean_prediction_gap', 'N/A')}" if model_type == 'regression' else ''}
 
+{distribution_prompt}
+
 === RULES ===
 - When a user asks "how was the fairness score calculated?", show the EXACT formula from above with the actual numbers plugged in.
 - When asked about specific metrics, reference the Tier (1/2/3) that produced them.
@@ -196,6 +310,7 @@ Mitigated Model (After Bias Correction):
 - If the user asks about SHAP, explain whether feature_importances_ or |coef_| was used.
 - Always be data-driven. Use the actual values from this audit in your explanations.
 - Do NOT invent formulas — only use what is documented above.
+- When asked to show/visualize/chart data, ALWAYS use the <<CHART:type:column:title>> marker format.
 """
 
     formatted_messages = [{"role": "system", "content": system_prompt}] + messages
@@ -208,11 +323,18 @@ Mitigated Model (After Bias Correction):
             max_tokens=800
         )
         answer = response.choices[0].message.content.strip()
-        
-        return jsonify({
+
+        # Post-process: extract chart markers and compute real chart data
+        cleaned_answer, charts = _extract_charts(answer, data_stats)
+
+        result = {
             "status": "success",
-            "reply": answer
-        }), 200
+            "reply": cleaned_answer,
+        }
+        if charts:
+            result["charts"] = charts
+
+        return jsonify(result), 200
 
     except Exception as e:
         print(f"Chat API Error: {str(e)}")
