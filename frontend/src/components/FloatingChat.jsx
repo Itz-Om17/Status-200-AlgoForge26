@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
+import { API_BASE_URL } from '../config/api';
 
 // ── Curated color palette for charts ────────────────────────────────────────
 const CHART_COLORS = [
@@ -228,7 +229,7 @@ export default function FloatingChat({ context }) {
       // Exclude welcome message from API
       const apiMessages = newMessages.filter(m => m.content).map(m => ({ role: m.role, content: m.content }));
 
-      const response = await fetch('http://127.0.0.1:5000/api/chat', {
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

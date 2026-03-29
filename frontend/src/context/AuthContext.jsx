@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth, googleProvider, db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { API_BASE_URL } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -81,7 +82,7 @@ export function AuthProvider({ children }) {
 
   async function verifyMfa(code) {
     if (!currentUser || !userProfile?.mfaSecret) throw new Error("MFA not set up");
-    const res = await fetch('http://127.0.0.1:5000/api/mfa/verify', {
+    const res = await fetch(`${API_BASE_URL}/api/mfa/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ secret: userProfile.mfaSecret, code: code })

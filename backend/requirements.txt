@@ -12,3 +12,4 @@ qrcode
 pypng
 groq
 cloudinary
+gunicorn

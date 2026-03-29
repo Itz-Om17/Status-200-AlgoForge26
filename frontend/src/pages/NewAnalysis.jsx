@@ -8,6 +8,7 @@ import {
   UploadCloud, FileText, CheckCircle, ChevronRight,
   Upload, Activity, Play, AlertTriangle
 } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 
 export default function NewAnalysis() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function NewAnalysis() {
     formData.append('data_file', datasetFile);
 
     try {
-      const response = await axios.post('http://127.0.0.1:5000/api/upload', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       const { llm_detection, model_file, data_file, sample_data, columns_detected, model_type, model_type_info } = response.data;
@@ -68,7 +69,7 @@ export default function NewAnalysis() {
     setIsAuditing(true);
     setApiError(null);
     try {
-      const resp = await axios.post('http://127.0.0.1:5000/api/audit', {
+      const resp = await axios.post(`${API_BASE_URL}/api/audit`, {
         model_file: auditParams.model_file,
         data_file: auditParams.data_file,
         target_column: detectedTarget,
@@ -100,7 +101,7 @@ export default function NewAnalysis() {
           const uploadToCloud = async (file) => {
             const formData = new FormData();
             formData.append('file', file);
-            const cloudResp = await axios.post('http://127.0.0.1:5000/api/upload/cloud', formData);
+            const cloudResp = await axios.post(`${API_BASE_URL}/api/upload/cloud`, formData);
             return cloudResp.data.url;
           };
 

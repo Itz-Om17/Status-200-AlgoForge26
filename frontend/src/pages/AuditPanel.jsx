@@ -4,6 +4,7 @@ import { CheckCircle, AlertTriangle, DownloadCloud, ShieldCheck, Activity, Info,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import FloatingChat from '../components/FloatingChat';
 import { exportElementToPDF } from '../utils/pdfExport';
+import { API_BASE_URL } from '../config/api';
 
 const InfoTooltip = ({ title, description, position = "top" }) => (
   <div className="relative flex items-center group/tooltip ml-2" style={{ display: 'inline-flex' }}>
@@ -527,7 +528,7 @@ export default function AuditPanel() {
             <div style={{display: 'flex', gap: '16px', marginTop: '28px'}}>
               <button 
                 onClick={() => handleSecureDownload(
-                  `http://127.0.0.1:5000/api/download/data?data_file=${encodeURIComponent(datasetFileName)}&model_file=${encodeURIComponent(modelFileName)}&target_column=${encodeURIComponent(detectedTarget)}&sensitive_column=${encodeURIComponent(detectedSensitiveCols[0] || '')}&data_url=${encodeURIComponent(datasetUrl || '')}&model_url=${encodeURIComponent(modelUrl || '')}`,
+                  `${API_BASE_URL}/api/download/data?data_file=${encodeURIComponent(datasetFileName)}&model_file=${encodeURIComponent(modelFileName)}&target_column=${encodeURIComponent(detectedTarget)}&sensitive_column=${encodeURIComponent(detectedSensitiveCols[0] || '')}&data_url=${encodeURIComponent(datasetUrl || '')}&model_url=${encodeURIComponent(modelUrl || '')}`,
                   `Mitigated_${datasetFileName}`,
                   "Exporting Mitigated Dataset...",
                   "Dataset Downloaded Successfully!"
@@ -540,7 +541,7 @@ export default function AuditPanel() {
               </button>
               <button 
                 onClick={() => handleSecureDownload(
-                  modelUrl || `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
+                  modelUrl || `${API_BASE_URL}/api/download/wrapper?model_file=${modelFileName}`,
                   "FairAI_Enterprise_Wrapper.zip",
                   "Packaging Enterprise Wrapper...",
                   "Wrapper Downloaded Successfully!"

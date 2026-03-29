@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { doc, setDoc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { db } from '../firebase';
+import { API_BASE_URL } from '../config/api';
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
@@ -105,7 +106,7 @@ export default function SettingsPage() {
     setMfaLoading(true);
     setMfaError('');
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/mfa/generate', {
+      const res = await fetch(`${API_BASE_URL}/api/mfa/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: displayEmail })
@@ -124,7 +125,7 @@ export default function SettingsPage() {
     setMfaError('');
     setMfaLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/mfa/verify', {
+      const res = await fetch(`${API_BASE_URL}/api/mfa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret: mfaData.secret, code: mfaCode })
