@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShieldCheck, ArrowRight, Activity, Eye, Zap, Server, EyeOff, Search,
-  Scale, ShieldAlert, FileSearch, Database, RefreshCcw, Sun, Moon, ChevronLeft, ChevronRight
+  Scale, ShieldAlert, FileSearch, Database, RefreshCcw, Sun, Moon, ChevronLeft, ChevronRight,
+  PlayCircle, Repeat, Sparkles
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
@@ -353,7 +354,7 @@ function HiddenRiskSection({ isDarkMode, textPrimary, textMuted, border }) {
         <div style={{ position: 'sticky', top: '120px' }}>
           <div style={{ fontSize: '11px', fontWeight: 800, color: '#ef4444', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '20px' }}>The Hidden Risk</div>
           <h2 style={{ fontSize: 'clamp(32px, 4vw, 48px)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.04em', marginBottom: '24px', color: textPrimary, transition: 'color 0.4s' }}>
-            The hidden costs of biased AI.
+            The Hidden costs of biased AI.
           </h2>
           <p style={{ fontSize: '18px', color: textMuted, lineHeight: 1.8, marginBottom: '28px', transition: 'color 0.4s' }}>
             Overcoming the systemic hurdles that prevent responsible enterprise deployment. Automated decisions can enforce systemic exclusion for millions in milliseconds — amplifying historical injustice at machine speed.
@@ -411,14 +412,135 @@ function HiddenRiskSection({ isDarkMode, textPrimary, textMuted, border }) {
   );
 }
 
+const WORKFLOW_STEPS = [
+  { title: "Dataset Analysis", desc: "Detect algorithm type & sensitive attributes automatically.", icon: Database, color: "#3b82f6" },
+  { title: "Prediction Module", desc: "Run original predictions and compute baseline group stats.", icon: Activity, color: "#8b5cf6" },
+  { title: "Scenario Generator", desc: "Flip sensitive attributes (e.g. implicitly mutating Male ↔ Female).", icon: RefreshCcw, color: "#f59e0b" },
+  { title: "Re-Prediction", desc: "Execute the model again on specifically flipped data instances.", icon: Repeat, color: "#ec4899" },
+  { title: "Bias Detection", desc: "Compare output disparities and calculate exact fairness scores.", icon: Scale, color: "#ef4444" },
+  { title: "Explainability", desc: "Generate SHAP values and demographic feature importances.", icon: Sparkles, color: "#06b6d4" },
+  { title: "Mitigation", desc: "Apply seamless ROC Threshold Shifting & bias correction.", icon: ShieldCheck, color: "#10b981" },
+];
+
+function WorkflowSection({ isDarkMode, textPrimary, textMuted, border, surface }) {
+  return (
+    <section id="workflow-section">
+      <div style={{ textAlign: 'center', marginBottom: '60px', padding: '0 32px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 800, color: '#3b82f6', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '16px' }}>FairAI Workflow</div>
+        <h2 style={{ fontSize: 'clamp(32px, 5vw, 42px)', fontWeight: 900, color: textPrimary, letterSpacing: '-0.03em', marginBottom: '16px', transition: 'color 0.4s' }}>AI Model Fairness Auditing System</h2>
+        <p style={{ color: textMuted, maxWidth: '600px', margin: '0 auto', fontSize: '16px', lineHeight: 1.6, transition: 'color 0.4s' }}>Our 7-step deterministic pipeline ensures no hidden risks escape the audit, operating completely black-box without touching your code.</p>
+      </div>
+
+      <div style={{ position: 'relative', width: '100%', overflow: 'hidden', padding: '0 0 100px 0' }}>
+        <style>{`
+          @keyframes slideRightToLeft {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .workflow-marquee {
+            display: flex;
+            width: max-content;
+            animation: slideRightToLeft 40s linear infinite;
+          }
+          .workflow-marquee:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
+
+        {/* Fading transparent edges for premium visual effect */}
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: '150px', background: `linear-gradient(to right, ${surface}, transparent)`, zIndex: 10, pointerEvents: 'none', transition: 'background 0.4s' }} />
+        <div style={{ position: 'absolute', top: 0, bottom: 0, right: 0, width: '150px', background: `linear-gradient(to left, ${surface}, transparent)`, zIndex: 10, pointerEvents: 'none', transition: 'background 0.4s' }} />
+
+        <div className="workflow-marquee" style={{ paddingTop: "40px" }}>
+          {[...WORKFLOW_STEPS, ...WORKFLOW_STEPS].map((step, i) => (
+            <div key={i}
+              style={{
+                width: '320px', flexShrink: 0, padding: '40px 32px', position: 'relative',
+                marginRight: '32px', // Use margin instead of flex gap ensures perfect -50% math!
+                background: isDarkMode ? 'rgba(25, 24, 37, 0.45)' : '#ffffff',
+                border: `1px solid ${border}`,
+                borderRadius: '24px',
+                boxShadow: isDarkMode ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.05)',
+                transition: 'background 0.3s, transform 0.3s, border-color 0.3s, box-shadow 0.3s'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = step.color;
+                e.currentTarget.style.transform = 'translateY(-8px)';
+                e.currentTarget.style.background = isDarkMode ? 'rgba(25, 24, 37, 0.85)' : '#f8faff';
+                e.currentTarget.style.boxShadow = isDarkMode ? `0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px ${step.color}aa` : `0 20px 40px rgba(0,0,0,0.1), 0 0 0 1px ${step.color}aa`;
+                const icon = e.currentTarget.querySelector('.icon-anim');
+                if (icon) icon.style.transform = 'scale(1.15) translateY(-4px)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = border;
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.background = isDarkMode ? 'rgba(25, 24, 37, 0.45)' : '#ffffff';
+                e.currentTarget.style.boxShadow = isDarkMode ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.05)';
+                const icon = e.currentTarget.querySelector('.icon-anim');
+                if (icon) icon.style.transform = 'scale(1) translateY(0)';
+              }}
+            >
+              <div style={{ fontSize: '11px', fontWeight: 800, color: textMuted, letterSpacing: '2px', marginBottom: '24px', textTransform: 'uppercase' }}>
+                STEP 0{(i % WORKFLOW_STEPS.length) + 1}
+              </div>
+
+              <div className="icon-anim" style={{
+                width: '48px', height: '48px', borderRadius: '12px', marginBottom: '32px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `linear-gradient(135deg, ${step.color}22, transparent)`,
+                border: `1px solid ${step.color}44`,
+                transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}>
+                <step.icon size={24} color={step.color} />
+              </div>
+
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: textPrimary, marginBottom: '16px', letterSpacing: '-0.3px', transition: 'color 0.4s' }}>
+                {step.title}
+              </h3>
+
+              <p style={{ fontSize: '14px', color: textMuted, lineHeight: 1.6, transition: 'color 0.4s' }}>
+                {step.desc}
+              </p>
+
+              {(i % WORKFLOW_STEPS.length) !== WORKFLOW_STEPS.length - 1 && (
+                <div style={{
+                  position: 'absolute', right: '-26px', top: '50%', transform: 'translateY(-50%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: 0.5
+                }}>
+                  <ArrowRight size={18} color={textMuted} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
   const isDarkMode = theme === 'dark';
   const dashRef = useRef(null);
   const [openModal, setOpenModal] = useState(null);
+  const [showTopBtn, setShowTopBtn] = useState(false);
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      // Check if user is near the bottom of the page (within 100px)
+      const isBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 150;
+      setShowTopBtn(isBottom);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const goToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   // Mouse-based 3D tilt for dashboard mockup
   useEffect(() => {
     const card = dashRef.current;
@@ -492,11 +614,24 @@ export default function LandingPage() {
             <span style={{ fontWeight: 800, fontSize: '17px', letterSpacing: '-0.5px', color: textPrimary }}>FairAI</span>
           </div>
           <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-            {['Platform', 'Solutions', 'Resources', 'Pricing'].map(item => (
-              <span key={item} style={{ fontSize: '14px', fontWeight: 600, color: textMuted, cursor: 'pointer', transition: 'color 0.2s' }}
+            {[
+              { label: 'Challenges', id: 'challenges-section' },
+              { label: 'Solutions', id: 'solutions-section' },
+              { label: 'How it Works', id: 'workflow-section' },
+              { label: 'About', id: 'about-us' }
+            ].map(item => (
+              <span key={item.id}
+                onClick={() => {
+                  if (item.id === 'about-us') window.scrollTo({ top: 0, behavior: 'smooth' });
+                  else {
+                    const el = document.getElementById(item.id);
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                style={{ fontSize: '14px', fontWeight: 600, color: textMuted, cursor: 'pointer', transition: 'color 0.2s' }}
                 onMouseEnter={e => e.target.style.color = textPrimary}
                 onMouseLeave={e => e.target.style.color = textMuted}>
-                {item}
+                {item.label}
               </span>
             ))}
           </div>
@@ -622,15 +757,17 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════════════════════ HIDDEN RISK ═══════════════════════════════════════ */}
-      <HiddenRiskSection
-        isDarkMode={isDarkMode}
-        textPrimary={textPrimary}
-        textMuted={textMuted}
-        border={border}
-      />
+      <div id="challenges-section">
+        <HiddenRiskSection
+          isDarkMode={isDarkMode}
+          textPrimary={textPrimary}
+          textMuted={textMuted}
+          border={border}
+        />
+      </div>
 
       {/* ═══════════════════════════════════════ SPLINE-STYLE 3D CAROUSEL ═══════════════════════════════════════ */}
-      <section style={{ background: surface, paddingTop: '60px', paddingBottom: '100px', position: 'relative', overflow: 'visible', transition: 'background 0.4s' }}>
+      <section id="solutions-section" style={{ background: surface, paddingTop: '60px', paddingBottom: '100px', position: 'relative', overflow: 'visible', transition: 'background 0.4s' }}>
         {/* Section header */}
         <div style={{ textAlign: 'center', padding: '0 32px', marginBottom: '60px', position: 'relative', zIndex: 5 }}>
           <div style={{ fontSize: '11px', fontWeight: 800, color: '#3b82f6', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '20px' }}>The FairAI Platform</div>
@@ -645,32 +782,105 @@ export default function LandingPage() {
         <SplineCarousel isDarkMode={isDarkMode} />
       </section>
 
+      {/* ═══════════════════════════════════════ THE FAIRAI WORKFLOW ═══════════════════════════════════════ */}
+      <WorkflowSection
+        isDarkMode={isDarkMode}
+        textPrimary={textPrimary}
+        textMuted={textMuted}
+        border={border}
+        surface={surface}
+      />
+
       {/* ═══════════════════════════════════════ FOOTER CTA ═══════════════════════════════════════ */}
-      <section style={{ padding: '120px 32px', background: isDarkMode ? '#12121d' : '#fff', borderTop: `1px solid ${border}`, textAlign: 'center', transition: 'background 0.4s' }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 900, letterSpacing: '-0.04em', color: textPrimary, marginBottom: '20px' }}>
-            Deploy with confidence.
+      <style>{`
+        @keyframes ambientGlowDark {
+          0% { box-shadow: 0 10px 40px -10px rgba(59,130,246,0.15), 0 0 0px rgba(139,92,246,0); transform: translateY(0px); }
+          50% { box-shadow: 0 15px 50px -5px rgba(59,130,246,0.3), 0 0 30px rgba(139,92,246,0.2); transform: translateY(-4px); }
+          100% { box-shadow: 0 10px 40px -10px rgba(59,130,246,0.15), 0 0 0px rgba(139,92,246,0); transform: translateY(0px); }
+        }
+        @keyframes ambientGlowLight {
+          0% { box-shadow: 0 10px 40px -10px rgba(59,130,246,0.05), 0 0 0px rgba(139,92,246,0); transform: translateY(0px); }
+          50% { box-shadow: 0 15px 50px -5px rgba(59,130,246,0.15), 0 0 30px rgba(139,92,246,0.1); transform: translateY(-4px); }
+          100% { box-shadow: 0 10px 40px -10px rgba(59,130,246,0.05), 0 0 0px rgba(139,92,246,0); transform: translateY(0px); }
+        }
+        @keyframes pulse-flare {
+          0% { opacity: 0.4; filter: blur(50px); transform: translate(-50%, -50%) scale(0.9) rotate(0deg); }
+          100% { opacity: 0.8; filter: blur(60px); transform: translate(-50%, -50%) scale(1.1) rotate(5deg); }
+        }
+      `}</style>
+      <section style={{ position: 'relative', padding: '140px 32px', background: isDarkMode ? '#0d0d17' : '#f8fafc', overflow: 'hidden', textAlign: 'center', transition: 'background 0.4s' }}>
+        {/* Animated Glow Effects behind the CTA */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '800px', height: '400px', background: 'radial-gradient(ellipse, rgba(59,130,246,0.25) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(50px)', animation: 'pulse-flare 5s infinite alternate ease-in-out' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '400px', height: '400px', background: 'radial-gradient(ellipse, rgba(139,92,246,0.25) 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)', animation: 'pulse-flare 4s infinite alternate-reverse ease-in-out' }} />
+
+        <div style={{
+          position: 'relative', maxWidth: '820px', margin: '0 auto',
+          background: isDarkMode ? 'rgba(25,24,37,0.4)' : 'rgba(255,255,255,0.6)',
+          padding: '64px 40px', borderRadius: '32px', border: 'none',
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          animation: isDarkMode ? 'ambientGlowDark 6s infinite ease-in-out' : 'ambientGlowLight 6s infinite ease-in-out',
+          zIndex: 10
+        }}>
+
+          <h2 style={{ fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 900, letterSpacing: '-0.04em', color: textPrimary, marginBottom: '24px', lineHeight: '1.1' }}>
+            Deploy with <span style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #a855f7 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>confidence.</span>
           </h2>
-          <p style={{ fontSize: '18px', color: textMuted, lineHeight: 1.75, marginBottom: '48px' }}>
+          <p style={{ fontSize: '20px', color: textMuted, lineHeight: 1.6, marginBottom: '48px', maxWidth: '580px', margin: '0 auto 48px auto' }}>
             Join the world's most innovative AI teams building a fairer digital future.
           </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/register" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '16px 34px', borderRadius: '9999px', fontSize: '16px', fontWeight: 700, background: isDarkMode ? 'linear-gradient(135deg,#3b82f6,#8b5cf6)' : '#111', color: '#fff', textDecoration: 'none', boxShadow: isDarkMode ? '0 0 40px rgba(59,130,246,0.4)' : '0 8px 24px rgba(0,0,0,0.12)' }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = ''}>
-              Get Started Now <ArrowRight size={16} />
-            </Link>
-            <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', padding: '16px 34px', borderRadius: '9999px', fontSize: '16px', fontWeight: 700, background: 'transparent', color: textMuted, textDecoration: 'none', border: `1px solid ${border}` }}>
-              Book a Demo
+
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <Link to="/register" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '18px 42px',
+              borderRadius: '9999px', fontSize: '18px', fontWeight: 800,
+              background: isDarkMode ? 'linear-gradient(135deg,#3b82f6,#8b5cf6)' : '#111', color: '#fff',
+              textDecoration: 'none',
+              boxShadow: isDarkMode ? '0 0 40px rgba(59,130,246,0.4), inset 0 2px 0 rgba(255,255,255,0.2)' : '0 12px 30px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = isDarkMode ? '0 0 60px rgba(59,130,246,0.6), inset 0 2px 0 rgba(255,255,255,0.2)' : '0 16px 40px rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.2)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = isDarkMode ? '0 0 40px rgba(59,130,246,0.4), inset 0 2px 0 rgba(255,255,255,0.2)' : '0 12px 30px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2)' }}>
+              Get Started Now <ArrowRight size={20} />
             </Link>
           </div>
+
         </div>
       </section>
+
+      {/* ── Go to Top Button ── */}
+      {showTopBtn && (
+        <button
+          onClick={goToTop}
+          style={{
+            position: 'fixed',
+            bottom: '40px',
+            right: '40px',
+            zIndex: 9999,
+            width: '45px',
+            height: '45px',
+            borderRadius: '50%',
+            background: isDarkMode ? 'rgba(59,130,246,0.2)' : 'rgba(17,17,17,0.1)',
+            backdropFilter: 'blur(8px)',
+            border: `1px solid ${isDarkMode ? 'rgba(59,130,246,0.3)' : 'rgba(17,17,17,0.2)'}`,
+            color: isDarkMode ? '#3b82f6' : '#111',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.background = isDarkMode ? 'rgba(59,130,246,0.3)' : 'rgba(17,17,17,0.2)'; }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = isDarkMode ? 'rgba(59,130,246,0.2)' : 'rgba(17,17,17,0.1)'; }}
+        >
+          <ChevronLeft size={24} style={{ transform: 'rotate(90deg)' }} />
+        </button>
+      )}
 
       {/* FOOTER */}
       <footer style={{ background: isDarkMode ? '#0a0a14' : '#f4f6fb', borderTop: `1px solid ${border}`, transition: 'background 0.4s' }}>
         {/* Footer bottom bar only */}
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ width: '100%', padding: '24px 48px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: textMuted, fontSize: '12px', fontWeight: 500 }}>
             <ShieldCheck size={13} color={textMuted} />
             <span>© 2026 FairAI Technologies Pvt. Ltd. All rights reserved.</span>

@@ -141,13 +141,6 @@ export default function NewAnalysis() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
             >
-              {(modelFile && datasetFile) ? (
-                <>
-                  <CheckCircle style={{width: 40, height: 40, color: '#10b981', marginBottom: 12}} />
-                  <div className="upload-main-text">Files Ready</div>
-                  <div className="upload-sub-text" style={{marginBottom: 0}}>{modelFile.name} & {datasetFile.name}</div>
-                </>
-              ) : (
                 <>
                   <div className="upload-icon-wrapper">
                     <UploadCloud />
@@ -155,20 +148,24 @@ export default function NewAnalysis() {
                   <div className="upload-main-text">Choose A File Or Drag And Drop Your Choice</div>
                   <div className="upload-sub-text">Only Supports Uploading .pkl and .csv Files. Size Limit: 100 MB</div>
                   
-                  <div className="browse-buttons">
+                  <div className="browse-buttons" style={{marginTop: (modelFile && datasetFile) ? '20px' : '0'}}>
                     <input type="file" id="model-upload" style={{display:'none'}} onChange={(e) => setModelFile(e.target.files[0] || null)} accept=".pkl" />
-                    <label htmlFor="model-upload" className="browse-btn">
-                      <Upload size={13} />
-                      <span>Browse Model (.pkl)</span>
+                    <label htmlFor="model-upload" className={`browse-btn ${modelFile ? 'uploaded' : ''}`}>
+                      <div className="icon-box">
+                        {modelFile ? <CheckCircle size={14} strokeWidth={3} /> : <Upload size={14} />}
+                      </div>
+                      <span>{modelFile ? "Model Selected (.pkl)" : "Browse Model (.pkl)"}</span>
                     </label>
+
                     <input type="file" id="dataset-upload" style={{display:'none'}} onChange={(e) => setDatasetFile(e.target.files[0] || null)} accept=".csv" />
-                    <label htmlFor="dataset-upload" className="browse-btn">
-                      <Upload size={13} />
-                      <span>Browse Dataset (.csv)</span>
+                    <label htmlFor="dataset-upload" className={`browse-btn ${datasetFile ? 'uploaded' : ''}`}>
+                      <div className="icon-box">
+                        {datasetFile ? <CheckCircle size={14} strokeWidth={3} /> : <Upload size={14} />}
+                      </div>
+                      <span>{datasetFile ? "Dataset Selected (.csv)" : "Browse Dataset (.csv)"}</span>
                     </label>
                   </div>
                 </>
-              )}
             </div>
 
             {(modelFile || datasetFile) && (

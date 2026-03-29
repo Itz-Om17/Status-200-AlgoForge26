@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Upload, History, Settings,
-  ShieldCheck, LogOut, User
+  ShieldCheck, LogOut, User, Menu
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ export default function DashboardLayout() {
   const { theme } = useTheme();
   const { currentUser, userProfile, logout, is2faVerified, verifyMfa } = useAuth();
   
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaError, setMfaError] = useState('');
   const [mfaLoading, setMfaLoading] = useState(false);
@@ -92,13 +93,50 @@ export default function DashboardLayout() {
   return (
     <div className={`app-layout ${theme === 'dark' ? 'dark-theme' : ''}`}>
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
         <div>
-          <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">
-              <ShieldCheck />
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: isCollapsed ? 'column' : 'row', 
+            alignItems: 'center', 
+            justifyContent: isCollapsed ? 'center' : 'space-between', 
+            gap: isCollapsed ? '20px' : '10px', 
+            padding: isCollapsed ? '0 0 24px 0' : '0 16px 32px 16px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, display: isCollapsed ? 'none' : 'block' }}>
+                <rect width="32" height="32" rx="8" fill="url(#dashLogoGrad)" />
+                {/* Brain left */}
+                <path d="M8 18c0 2.2 1.5 4 3.5 4 .3 0 .5 0 .8-.1V13c-.3-.1-.5-.1-.8-.1C9.5 13 8 15 8 18z" fill="white" opacity="0.9" />
+                <path d="M12.3 12.5c.3-.7.9-1 1.5-1 .4 0 .7.1 1 .3V22c-.3.1-.6.2-1 .2-.6 0-1.2-.3-1.5-1V12.5z" fill="white" opacity="0.9" />
+                {/* Magnifying glass */}
+                <circle cx="15" cy="17" r="3.5" stroke="white" strokeWidth="1.5" fill="none" opacity="0.85" />
+                <line x1="17.5" y1="19.5" x2="20" y2="22" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.85" />
+                {/* Scale */}
+                <line x1="20" y1="11" x2="26" y2="11" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
+                <line x1="23" y1="11" x2="23" y2="21" stroke="white" strokeWidth="1.2" opacity="0.9" />
+                <path d="M20 11 L18.5 14.5 H21.5 Z" fill="white" opacity="0.75" />
+                <path d="M26 11 L24.5 14.5 H27.5 Z" fill="white" opacity="0.75" />
+                <defs>
+                  <linearGradient id="dashLogoGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#1e3a5f" />
+                    <stop offset="100%" stopColor="#0d0d17" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              {!isCollapsed && <span className="sidebar-logo-text" style={{ fontSize: '18px', margin: 0 }}>FairAI</span>}
             </div>
-            <span className="sidebar-logo-text">FairAI</span>
+            
+            <button 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#666', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px' }}
+              title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f0f0'; e.currentTarget.style.color = '#111'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#666'; }}
+            >
+              <Menu size={22} />
+            </button>
           </div>
           
           <nav className="sidebar-nav">
@@ -109,6 +147,7 @@ export default function DashboardLayout() {
                   key={item.to}
                   to={item.to}
                   className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  title={isCollapsed ? item.label : undefined}
                 >
                   <Icon />
                   <span>{item.label}</span>
@@ -125,7 +164,14 @@ export default function DashboardLayout() {
           <div className="breadcrumbs">
           </div>
           <div className="top-bar-actions">
-            <button onClick={handleSignOut} className="icon-btn" title="Sign Out">
+            <button 
+              onClick={handleSignOut} 
+              className="icon-btn signout-hover" 
+              title="Sign Out"
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.background = ''; }}
+              style={{ transition: 'all 0.2s' }}
+            >
               <LogOut size={15} />
             </button>
             <div 

@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertTriangle, DownloadCloud } from 'lucide-react';
+import { CheckCircle, AlertTriangle, DownloadCloud, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import FloatingChat from '../components/FloatingChat';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AuditPanel() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const aiBoxBg = isDark ? '#1e293b' : '#f8fafc';
+  const aiBoxBorder = isDark ? '#334155' : '#e2e8f0';
+  const aiTextColor = isDark ? '#cbd5e1' : '#334155';
   const { state: navigationState } = useLocation();
   const navigate = useNavigate();
 
@@ -86,6 +93,19 @@ export default function AuditPanel() {
   const b_flips = auditResults?.baseline?.counterfactual_flips || 0;
   const m_flips = auditResults?.mitigated?.counterfactual_flips || 0;
 
+  // Animation states for the circle progress drawing effect
+  const [animatedBDash, setAnimatedBDash] = useState(314);
+  const [animatedMDash, setAnimatedMDash] = useState(314);
+
+  useEffect(() => {
+    // Small delay so the browser registers the starting state before transitioning
+    const timer = setTimeout(() => {
+      setAnimatedBDash(314 - ((314 * baselineFairness) / 100));
+      setAnimatedMDash(314 - ((314 * mitigatedFairness) / 100));
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [baselineFairness, mitigatedFairness]);
+
   return (
     <>
       {toastMessage && (
@@ -114,8 +134,8 @@ export default function AuditPanel() {
           <div className="score-wrapper">
             <div className="score-circle">
               <svg width="120" height="120" style={{transform: 'rotate(-90deg)'}}>
-                <circle cx="60" cy="60" r="50" stroke="#f3f4f6" strokeWidth="8" fill="transparent" />
-                <circle cx="60" cy="60" r="50" stroke="#ef4444" strokeWidth="8" fill="transparent" strokeDasharray="314" strokeDashoffset={314 - ((314 * baselineFairness) / 100)} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1s ease-out'}} />
+                <circle cx="60" cy="60" r="50" stroke="#f3f4f6" strokeWidth="8" fill="transparent" opacity={isDark ? 0.05 : 0.5} />
+                <circle cx="60" cy="60" r="50" stroke="#ef4444" strokeWidth="8" fill="transparent" strokeDasharray="314" strokeDashoffset={animatedBDash} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1)'}} />
               </svg>
               <div className="score-text">
                 <span className="score-number">{baselineFairness}%</span>
@@ -143,6 +163,29 @@ export default function AuditPanel() {
             </div>
           </div>
 
+          {/* AI Insight Box (Baseline) */}
+          {auditResults?.baseline?.explanation && (
+            <div style={{
+              background: aiBoxBg,
+              border: `1px solid ${aiBoxBorder}`,
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '18px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              transition: 'background 0.3s'
+            }}>
+              <Sparkles style={{ color: '#8b5cf6', flexShrink: 0, marginTop: '2px' }} size={18} />
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#8b5cf6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Analysis</div>
+                <div style={{ fontSize: '13px', color: aiTextColor, lineHeight: 1.6, fontWeight: 500, transition: 'color 0.3s' }}>
+                  {auditResults.baseline.explanation}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="chart-box">
             <div className="chart-title">SHAP Feature Importance</div>
             <ResponsiveContainer width="100%" height="85%">
@@ -161,7 +204,7 @@ export default function AuditPanel() {
         </div>
 
         {/* Mitigated Model */}
-        <div className="dashboard-card">
+        <div className="dashboard-card border-green">
           <div className="dashboard-card-bar green"></div>
           <h2 className="card-title">
             <span className="card-dot green"></span>
@@ -171,8 +214,8 @@ export default function AuditPanel() {
           <div className="score-wrapper">
             <div className="score-circle">
               <svg width="120" height="120" style={{transform: 'rotate(-90deg)'}}>
-                <circle cx="60" cy="60" r="50" stroke="#f3f4f6" strokeWidth="8" fill="transparent" />
-                <circle cx="60" cy="60" r="50" stroke="#10b981" strokeWidth="8" fill="transparent" strokeDasharray="314" strokeDashoffset={314 - ((314 * mitigatedFairness) / 100)} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1s ease-out'}} />
+                <circle cx="60" cy="60" r="50" stroke="#f3f4f6" strokeWidth="8" fill="transparent" opacity={isDark ? 0.05 : 0.5} />
+                <circle cx="60" cy="60" r="50" stroke="#10b981" strokeWidth="8" fill="transparent" strokeDasharray="314" strokeDashoffset={animatedMDash} strokeLinecap="round" style={{transition: 'stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1)'}} />
               </svg>
               <div className="score-text">
                 <span className="score-number">{mitigatedFairness}%</span>
@@ -200,6 +243,29 @@ export default function AuditPanel() {
             </div>
           </div>
 
+          {/* AI Insight Box (Mitigated) */}
+          {auditResults?.mitigated?.explanation && (
+            <div style={{
+              background: aiBoxBg,
+              border: `1px solid ${aiBoxBorder}`,
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '18px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'flex-start',
+              transition: 'background 0.3s'
+            }}>
+              <Sparkles style={{ color: '#10b981', flexShrink: 0, marginTop: '2px' }} size={18} />
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Verification</div>
+                <div style={{ fontSize: '13px', color: aiTextColor, lineHeight: 1.6, fontWeight: 500, transition: 'color 0.3s' }}>
+                  {auditResults.mitigated.explanation}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="chart-box">
             <div className="chart-title">SHAP Feature Importance</div>
             <ResponsiveContainer width="100%" height="85%">
@@ -215,38 +281,15 @@ export default function AuditPanel() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-
-          <div style={{display: 'flex', gap: '16px', marginTop: '24px'}}>
-            <button 
-              onClick={() => handleSecureDownload(
-                `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
-                `Mitigated_${datasetFileName}`,
-                "Exporting Mitigated Dataset...",
-                "Dataset Downloaded Successfully!"
-              )}
-              className="confirm-btn" 
-              style={{flex: 1, backgroundColor: '#064e3b', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '8px', border: '1px solid #059669', cursor: 'pointer', fontWeight: 600}}
-            >
-              <DownloadCloud size={18} />
-              <span>Export Fair Dataset (.csv)</span>
-            </button>
-            <button 
-              onClick={() => handleSecureDownload(
-                `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
-                "FairAI_Enterprise_Wrapper.zip",
-                "Packaging Enterprise Wrapper...",
-                "Wrapper Downloaded Successfully!"
-              )}
-              className="confirm-btn" 
-              style={{flex: 1, backgroundColor: '#1e1b4b', color: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '8px', border: '1px solid #7c3aed', cursor: 'pointer', fontWeight: 600}}
-            >
-              <DownloadCloud size={18} />
-              <span>Deploy Model Wrapper (.zip)</span>
-            </button>
-          </div>
-
         </div>
       </div>
+
+      <FloatingChat context={{
+        target: detectedTarget,
+        sensitive: detectedSensitive,
+        baseline: auditResults?.baseline,
+        mitigated: auditResults?.mitigated
+      }} />
     </>
   );
 }
