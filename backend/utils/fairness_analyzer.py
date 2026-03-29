@@ -233,27 +233,11 @@ def analyze_fairness(model_path: str, data_path: str, target_column: str, sensit
                     shap_importance_sensitive = val
             shap_results = sorted(shap_results, key=lambda x: x['importance'], reverse=True)[:5]
         else:
-            # SHAP KernelExplainer is too slow for real-time without strict numeric constraints.
-            # Using TreeExplainer if it's a tree model.
-            explainer = shap.Explainer(model, X_sample)
-            shap_values = explainer(X_sample)
-            
-            # Global feature importance is mean absolute SHAP value
-            vals = np.abs(shap_values.values).mean(0)
-            
-            # If multi-class output (3D array), take mean across classes
-            if len(vals.shape) > 1:
-                vals = vals.mean(axis=1)
-
-            feature_names = X_sample.columns
-            # Normalize peak to 1.0 (or total sum to 1.0) for visual scale
-            val_sum = sum(vals) or 1
-            for name, val in zip(feature_names, vals):
-                v_norm = val / val_sum
-                shap_results.append({"name": name, "importance": round(float(v_norm), 3)})
-                if name == sensitive_column:
-                    shap_importance_sensitive = v_norm
-            shap_results = sorted(shap_results, key=lambda x: x['importance'], reverse=True)[:5]
+            # SHAP Explainer (Tree/Kernel) involves C-extensions that notoriously 
+            # SEGFAULT on Windows with newer Scikit-learn/XGBoost compiled binaries.
+            # Segfaults instantly kill the Flask process causing ERR_CONNECTION_RESET.
+            # If the model didn't expose feature_importances_, safely bypass.
+            raise ValueError("Model does not natively expose feature_importances_. Bypassing complex SHAP Explainer to prevent C++ segfault.")
 
     except Exception as e:
         print(f"SHAP extraction failed or feature_importances unavailable: {e}")

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 import {
   UploadCloud, FileText, CheckCircle, ChevronRight,
   Upload, Activity, Play, AlertTriangle
@@ -8,6 +11,7 @@ import {
 
 export default function NewAnalysis() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [viewState, setViewState] = useState('upload'); // 'upload', 'analyzing'
   const [modalStage, setModalStage] = useState('loading');
   
@@ -82,6 +86,48 @@ export default function NewAnalysis() {
       
       // Cache results so they persist when user navigates away and comes back
       localStorage.setItem('current_audit', JSON.stringify(dashboardPayload));
+
+      // Ensure history logging if currentUser exists
+      if (currentUser) {
+        try {
+          const results = resp.data.results || resp.data.audit_results;
+          const score = results?.combined_results?.overall_fairness_score ?? results?.fairness_score ?? 0;
+          const status = score >= 80 ? 'passed' : score >= 60 ? 'warning' : 'failed';
+          
+          console.log("[History] Preserving session in Cloudinary/Firestore...");
+
+          // 1. Upload Files to Cloudinary via Backend
+          const uploadToCloud = async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            const cloudResp = await axios.post('http://127.0.0.1:5000/api/upload/cloud', formData);
+            return cloudResp.data.url;
+          };
+
+          const modelUrl = await uploadToCloud(modelFile);
+          const datasetUrl = await uploadToCloud(datasetFile);
+
+          // 2. Save full audit document to Firestore
+          await addDoc(collection(db, 'audits'), {
+            userId: currentUser.uid,
+            modelName: modelFile.name,
+            datasetName: datasetFile.name,
+            modelUrl: modelUrl,
+            datasetUrl: datasetUrl,
+            sensitiveAttr: detectedSensitiveCols.join(', '),
+            fairnessScore: score,
+            status: status,
+            auditResults: results,
+            detectedTarget,
+            detectedSensitiveCols,
+            detectedModelType: resp.data.model_type || detectedModelType,
+            timestamp: serverTimestamp()
+          });
+          console.log("[History] session preserved successfully.");
+        } catch (fbErr) {
+          console.error("[History] Failed to preserve audit session:", fbErr);
+        }
+      }
 
       // Pass the fully computed results natively to the Dashboard routing structure
       navigate('/dashboard', { state: dashboardPayload });

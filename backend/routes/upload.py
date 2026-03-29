@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 from werkzeug.utils import secure_filename
 from utils.llm_helper import detect_columns
 from utils.model_type_detector import detect_model_type
+from utils.cloudinary_helper import upload_to_cloudinary
 
 upload_bp = Blueprint('upload', __name__)
 
@@ -91,3 +92,33 @@ def upload_files():
         # Full structured report
         "llm_detection":    detection_result,
     }), 200
+
+@upload_bp.route('/api/upload/cloud', methods=['POST'])
+def upload_to_cloud_storage():
+    """
+    Proxy route to upload a file to Cloudinary.
+    """
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    filename = secure_filename(file.filename)
+    temp_path = os.path.join(UPLOAD_FOLDER, f"cloud_{filename}")
+    
+    try:
+        file.save(temp_path)
+        cloud_url = upload_to_cloudinary(temp_path)
+        
+        # Cleanup temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        if cloud_url:
+            return jsonify({"status": "success", "url": cloud_url}), 200
+        else:
+            return jsonify({"error": "Cloudinary upload failed"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

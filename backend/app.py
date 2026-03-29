@@ -13,10 +13,12 @@ CORS(app)
 from routes.upload import upload_bp
 from routes.audit import audit_bp
 from routes.download import download_bp
+from routes.mfa import mfa_bp
 
 app.register_blueprint(upload_bp)
 app.register_blueprint(audit_bp)
 app.register_blueprint(download_bp)
+app.register_blueprint(mfa_bp)
 
 
 @app.route('/api/health', methods=['GET'])

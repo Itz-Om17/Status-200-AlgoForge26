@@ -31,6 +31,8 @@ export default function AuditPanel() {
   const auditResults = localData?.auditResults;
   const modelFileName = localData?.modelFileName;
   const datasetFileName = localData?.datasetFileName;
+  const modelUrl = localData?.modelUrl;
+  const datasetUrl = localData?.datasetUrl;
   const detectedTarget = localData?.detectedTarget;
   const detectedSensitiveCols = localData?.detectedSensitiveCols || [];
   const detectedModelType = localData?.detectedModelType || 'classification';
@@ -373,7 +375,7 @@ export default function AuditPanel() {
                   <div style={{display: 'flex', gap: '16px', marginTop: '24px'}}>
                     <button 
                       onClick={() => handleSecureDownload(
-                        `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
+                        datasetUrl || `http://127.0.0.1:5000/api/download/data?data_file=${datasetFileName}&target_column=${detectedTarget}`,
                         `Mitigated_${datasetFileName}`,
                         "Exporting Mitigated Dataset...",
                         "Dataset Downloaded Successfully!"
@@ -386,7 +388,7 @@ export default function AuditPanel() {
                     </button>
                     <button 
                       onClick={() => handleSecureDownload(
-                        `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
+                        modelUrl || `http://127.0.0.1:5000/api/download/wrapper?model_file=${modelFileName}`,
                         "FairAI_Enterprise_Wrapper.zip",
                         "Packaging Enterprise Wrapper...",
                         "Wrapper Downloaded Successfully!"
