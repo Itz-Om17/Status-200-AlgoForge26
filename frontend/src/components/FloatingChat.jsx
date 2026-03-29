@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, Mic } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
@@ -12,6 +12,44 @@ const CHART_COLORS = [
   '#38bdf8', '#a78bfa', '#f87171', '#4ade80', '#facc15',
   '#2dd4bf', '#c084fc', '#fb923c', '#22d3ee', '#e879f9',
 ];
+
+// ── Custom Tooltip ──────────────────────────────────────────────────────────
+const CustomTooltip = ({ active, payload, total }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const color = payload[0].payload.fill || payload[0].color || '#6366f1';
+    
+    return (
+      <div style={{
+        backgroundColor: '#0f172a',
+        border: `1px solid ${color}`,
+        borderRadius: '10px',
+        padding: '10px 14px',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        minWidth: '120px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '13px' }}>{data.name}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '12px', paddingLeft: '18px' }}>
+          <span>Count:</span>
+          <span style={{ color: '#fff', fontWeight: 600 }}>{data.value}</span>
+        </div>
+        {total && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#cbd5e1', fontSize: '12px', paddingLeft: '18px' }}>
+            <span>Share:</span>
+            <span style={{ color: '#fff', fontWeight: 600 }}>{((data.value / total) * 100).toFixed(1)}%</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
 
 // ── Inline Chart component ──────────────────────────────────────────────────
 function InlineChart({ chart }) {
@@ -52,30 +90,34 @@ function InlineChart({ chart }) {
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={65}
-                innerRadius={30}
+                outerRadius={50}
+                innerRadius={25}
                 paddingAngle={3}
                 strokeWidth={0}
-                label={({ name, value }) => `${name} (${((value / total) * 100).toFixed(1)}%)`}
-                labelLine={{ stroke: '#475569', strokeWidth: 1 }}
-                style={{ fontSize: '10px', fill: '#cbd5e1' }}
+                label={({ cx, cy, midAngle, innerRadius, outerRadius, value, name, percent, index }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = outerRadius * 1.35;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  return (
+                    <text 
+                      x={x} y={y} 
+                      fill={CHART_COLORS[index % CHART_COLORS.length]} 
+                      textAnchor={x > cx ? 'start' : 'end'} 
+                      dominantBaseline="central"
+                      style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.02em' }}
+                    >
+                      {`${name} (${((value / total) * 100).toFixed(1)}%)`}
+                    </text>
+                  );
+                }}
+                labelLine={{ stroke: '#475569', strokeWidth: 1, strokeDasharray: '2 2' }}
               >
                 {data.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #6366f1',
-                  borderRadius: '10px',
-                  padding: '8px 12px',
-                  boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
-                }}
-                labelStyle={{ color: '#fff', fontWeight: 700, fontSize: '11px' }}
-                itemStyle={{ color: '#c7d2fe', fontSize: '11px' }}
-                formatter={(value) => [`${value} (${((value / total) * 100).toFixed(1)}%)`, 'Count']}
-              />
+              <Tooltip content={<CustomTooltip total={total} />} cursor={{fill: 'transparent'}} />
             </PieChart>
           </ResponsiveContainer>
           {/* Legend below chart */}
@@ -113,18 +155,7 @@ function InlineChart({ chart }) {
               tick={{ fill: '#cbd5e1', fontSize: 10, fontWeight: 500 }}
               width={70}
             />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#0f172a',
-                border: '1px solid #6366f1',
-                borderRadius: '10px',
-                padding: '8px 12px',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
-              }}
-              labelStyle={{ color: '#fff', fontWeight: 700, fontSize: '11px' }}
-              itemStyle={{ color: '#c7d2fe', fontSize: '11px' }}
-              formatter={(value) => [`${value} (${((value / total) * 100).toFixed(1)}%)`, 'Count']}
-            />
+            <Tooltip content={<CustomTooltip total={total} />} cursor={{fill: 'rgba(99, 102, 241, 0.1)'}} />
             <Bar dataKey="value" radius={[0, 6, 6, 0]}>
               {data.map((_, i) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -145,12 +176,33 @@ export default function FloatingChat({ context }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: 'Hi! I am your FairAI Enterprise Analyst. Ask me anything about this fairness audit — formulas, metrics, or even "Show me the distribution of gender in a pie chart!"',
+      content: 'Welcome to FairAI Analytics. Your multi-tier fairness audit is complete.\n\nI am here to help you interpret these results with complete transparency. You can ask me to explain the mathematical formulas used to evaluate your model, break down SHAP feature penalties, or generate live visualizations of your underlying dataset.\n\nTo get started, try asking:\n• "How exactly was my fairness score calculated?"\n• "Which feature is driving the most bias?"\n• "Show me the distribution of the sensitive attribute in a pie chart."',
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef(null);
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in your browser.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInputValue((prev) => (prev ? prev + ' ' + transcript : transcript));
+    };
+    recognition.start();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -212,23 +264,27 @@ export default function FloatingChat({ context }) {
   return (
     <div style={{ position: 'fixed', bottom: '32px', right: '32px', zIndex: 9999 }}>
       {/* Chat Window */}
-      {isOpen && (
+      <div style={{
+        position: 'absolute',
+        bottom: '70px',
+        right: '0',
+        width: '400px',
+        height: '560px',
+        background: '#fff',
+        borderRadius: '16px',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        fontFamily: 'Inter, sans-serif',
+        opacity: isOpen ? 1 : 0,
+        transform: isOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
+        pointerEvents: isOpen ? 'auto' : 'none',
+        transition: 'opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transformOrigin: 'bottom right',
+      }}>
+        {/* Header */}
         <div style={{
-          position: 'absolute',
-          bottom: '70px',
-          right: '0',
-          width: '400px',
-          height: '560px',
-          background: '#fff',
-          borderRadius: '16px',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          fontFamily: 'Inter, sans-serif'
-        }}>
-          {/* Header */}
-          <div style={{
             background: 'linear-gradient(135deg, #1e293b, #0f172a)',
             color: '#fff',
             padding: '16px',
@@ -330,8 +386,27 @@ export default function FloatingChat({ context }) {
             background: '#fff',
             borderTop: '1px solid #e2e8f0',
             display: 'flex',
-            gap: '8px'
+            gap: '8px',
+            alignItems: 'center'
           }}>
+            <button
+              type="button"
+              onClick={handleVoiceInput}
+              title="Voice Input"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isListening ? '#ef4444' : '#64748b',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px',
+                animation: isListening ? 'pulse 1.5s infinite' : 'none',
+              }}
+            >
+              <Mic size={20} />
+            </button>
             <input 
               type="text"
               value={inputValue}
@@ -359,6 +434,7 @@ export default function FloatingChat({ context }) {
                 border: 'none',
                 borderRadius: '8px',
                 width: '40px',
+                height: '40px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -370,7 +446,6 @@ export default function FloatingChat({ context }) {
             </button>
           </form>
         </div>
-      )}
 
       {/* Floating Button */}
       <button 
@@ -399,6 +474,11 @@ export default function FloatingChat({ context }) {
         @keyframes blink {
           0% { opacity: 0.2; }
           100% { opacity: 1; }
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.7; }
+          100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
     </div>

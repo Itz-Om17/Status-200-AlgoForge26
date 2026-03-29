@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Upload, History, Settings,
   ShieldCheck, LogOut, User
@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useTheme();
   const { currentUser, userProfile, logout, is2faVerified, verifyMfa } = useAuth();
   
@@ -161,10 +162,17 @@ export default function DashboardLayout() {
           </div>
         </div>
 
-        <div className="page-content">
+        <div className="page-content" key={location.pathname} style={{ animation: 'pageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <Outlet />
         </div>
       </div>
+      
+      <style>{`
+        @keyframes pageFadeIn {
+          0% { opacity: 0; transform: translateY(15px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

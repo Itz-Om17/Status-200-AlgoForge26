@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, DownloadCloud, ShieldCheck, Activity, Info, Database, Brain } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import FloatingChat from '../components/FloatingChat';
+import { exportElementToPDF } from '../utils/pdfExport';
 
 const InfoTooltip = ({ title, description, position = "top" }) => (
   <div className="relative flex items-center group/tooltip ml-2" style={{ display: 'inline-flex' }}>
@@ -40,6 +41,8 @@ export default function AuditPanel() {
 
   const [toastMessage, setToastMessage] = useState(null);
   const toastTimeoutRef = useRef(null);
+  const reportRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
   
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -68,6 +71,23 @@ export default function AuditPanel() {
     } catch (err) {
       console.error(err);
       showToast("Download Failed - See Console");
+    }
+  };
+
+  const exportToPDF = async () => {
+    if (!reportRef.current) return;
+    setIsExporting(true);
+    showToast("Generating PDF Report...");
+    // Give React a moment to apply the isExporting=true state
+    await new Promise(resolve => setTimeout(resolve, 150));
+    try {
+      await exportElementToPDF(reportRef.current, 'FairAI_Compliance_Report.pdf');
+      showToast("PDF Report Downloaded Successfully!");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to generate PDF.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -100,9 +120,26 @@ export default function AuditPanel() {
         </div>
       )}
 
-      <h1 className="page-title" style={{marginBottom: 8}}>Fairness Audit Report</h1>
-      
-      <div style={{
+      <div ref={reportRef}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', paddingTop: '8px' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>Fairness Audit Report</h1>
+          {!isExporting && (
+            <button 
+              onClick={exportToPDF}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', 
+                borderRadius: '8px', border: '1px solid rgba(148, 163, 184, 0.4)', background: 'rgba(30, 41, 59, 0.5)',
+                color: '#e2e8f0', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                transition: 'all 0.2s', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+            >
+              <DownloadCloud size={16} />
+              Export PDF Report
+            </button>
+          )}
+        </div>
+        
+        <div style={{
           backgroundColor: 'rgba(30, 41, 59, 0.5)', backdropFilter: 'blur(8px)', 
           borderRadius: '16px', padding: '24px', border: '1px solid rgba(51, 65, 85, 0.5)', 
           display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center',
@@ -486,6 +523,7 @@ export default function AuditPanel() {
             </div>
 
             {/* Download Buttons — shown once below combined report */}
+            {!isExporting && (
             <div style={{display: 'flex', gap: '16px', marginTop: '28px'}}>
               <button 
                 onClick={() => handleSecureDownload(
@@ -514,9 +552,11 @@ export default function AuditPanel() {
                 <span>Deploy Model Wrapper (.zip)</span>
               </button>
             </div>
+            )}
 
           </div>
         </div>
+      </div>
       </div>
 
       {/* Floating AI Chat */}
